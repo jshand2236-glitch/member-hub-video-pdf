@@ -1,0 +1,11 @@
+[build]
+  command = "npm run netlify-build"
+
+# The Next.js Runtime plugin auto-detects the framework and publish
+# directory, so no [build] "publish" setting is needed here.
+#
+# "netlify-build" (see package.json) runs `drizzle-kit push --force` against
+# the auto-provisioned Netlify Database (via the NETLIFY_DB_URL env var it
+# injects at build time) before `next build`, so the Postgres schema stays
+# in sync automatically on every deploy. This only applies on Netlify — a
+# plain `npm run build` (e.g. on Vercel) is unaffected.
