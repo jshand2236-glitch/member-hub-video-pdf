@@ -1,0 +1,74 @@
+import Link from "next/link";
+import { auth } from "@/auth";
+import { hasActiveSubscription } from "@/lib/subscription";
+
+export default async function Home() {
+  const session = await auth();
+  const isSubscribed = session?.user?.id
+    ? await hasActiveSubscription(session.user.id)
+    : false;
+
+  return (
+    <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-24">
+      <div className="max-w-2xl">
+        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+          会員限定の動画とPDF資料を、
+          <br />
+          いつでもどこでも。
+        </h1>
+        <p className="mt-6 text-lg text-black/70 dark:text-white/70">
+          月額プランに登録すると、限定公開の動画コンテンツと資料PDFがすべて閲覧できるようになります。
+        </p>
+        <div className="mt-8 flex flex-wrap gap-4">
+          {session?.user ? (
+            isSubscribed ? (
+              <Link
+                href="/dashboard"
+                className="rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background hover:opacity-90"
+              >
+                マイページへ
+              </Link>
+            ) : (
+              <Link
+                href="/pricing"
+                className="rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background hover:opacity-90"
+              >
+                プランに登録する
+              </Link>
+            )
+          ) : (
+            <>
+              <Link
+                href="/register"
+                className="rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background hover:opacity-90"
+              >
+                会員登録して始める
+              </Link>
+              <Link
+                href="/pricing"
+                className="rounded-full border border-black/15 px-6 py-3 text-sm font-medium hover:bg-black/5 dark:border-white/20 dark:hover:bg-white/10"
+              >
+                料金プランを見る
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-20 grid gap-8 sm:grid-cols-2">
+        <div className="rounded-2xl border border-black/10 p-6 dark:border-white/10">
+          <h2 className="text-lg font-semibold">🎥 限定動画</h2>
+          <p className="mt-2 text-sm text-black/60 dark:text-white/60">
+            会員だけが視聴できる限定公開動画を配信します。
+          </p>
+        </div>
+        <div className="rounded-2xl border border-black/10 p-6 dark:border-white/10">
+          <h2 className="text-lg font-semibold">📄 資料PDF</h2>
+          <p className="mt-2 text-sm text-black/60 dark:text-white/60">
+            会員限定の資料をブラウザ上でそのまま閲覧できます。
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

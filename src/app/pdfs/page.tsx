@@ -1,0 +1,54 @@
+import { requireActiveSubscriber } from "@/lib/require-subscriber";
+import { db } from "@/db";
+import { pdfDocuments } from "@/db/schema";
+import { asc } from "drizzle-orm";
+
+export const metadata = {
+  title: "会員限定資料PDF | Member Hub",
+};
+
+export default async function PdfsPage() {
+  await requireActiveSubscriber("/pdfs");
+
+  const allPdfs = await db.select().from(pdfDocuments).orderBy(asc(pdfDocuments.sortOrder));
+
+  return (
+    <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
+      <h1 className="text-2xl font-bold">会員限定資料PDF</h1>
+
+      {allPdfs.length === 0 ? (
+        <p className="mt-8 text-sm text-black/60 dark:text-white/60">
+          まだ資料が登録されていません。
+        </p>
+      ) : (
+        <div className="mt-8 space-y-10">
+          {allPdfs.map((doc) => (
+            <div key={doc.id}>
+              <h2 className="font-semibold">{doc.title}</h2>
+              {doc.description && (
+                <p className="mt-1 text-sm text-black/60 dark:text-white/60">
+                  {doc.description}
+                </p>
+              )}
+              <div className="mt-3 overflow-hidden rounded-2xl border border-black/10 dark:border-white/10">
+                <iframe
+                  src={doc.url}
+                  title={doc.title}
+                  className="h-[80vh] w-full"
+                />
+              </div>
+              <a
+                href={doc.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-block text-sm underline text-black/60 dark:text-white/60"
+              >
+                新しいタブで開く / ダウンロード
+              </a>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
