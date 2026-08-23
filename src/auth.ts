@@ -4,18 +4,14 @@ import bcrypt from "bcryptjs";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { authConfig } from "@/auth.config";
 
+// Full Auth.js config, including the Credentials provider (which needs
+// bcrypt + the Postgres client). Only import this from Route Handlers,
+// Server Actions, and Server Components (all Node.js runtime). Proxy.ts
+// uses the edge-safe `authConfig` directly instead - see auth.config.ts.
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  // We self-host (Vercel, a VPS, Docker, etc.) rather than relying on a
-  // single known hostname baked in at build time, so we trust the Host
-  // header the same way most self-hosted Auth.js deployments do. If you
-  // deploy behind a reverse proxy, make sure it forwards the real
-  // X-Forwarded-Host/Proto headers.
-  trustHost: true,
-  session: { strategy: "jwt" },
-  pages: {
-    signIn: "/login",
-  },
+  ...authConfig,
   providers: [
     Credentials({
       name: "credentials",
@@ -47,19 +43,4 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     }),
   ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user?.id) {
-        token.userId = user.id;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user && token.userId) {
-        session.user.id = token.userId as string;
-      }
-      return session;
-    },
-  },
-  secret: process.env.AUTH_SECRET,
 });
