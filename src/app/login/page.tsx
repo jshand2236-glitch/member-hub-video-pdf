@@ -16,7 +16,7 @@ export default async function LoginPage(props: PageProps<"/login">) {
     <div className="mx-auto max-w-md px-4 py-16 sm:px-6">
       <h1 className="text-2xl font-bold">ログイン</h1>
       <LoginForm callbackUrl={callbackUrl} />
-      <p className="mt-6 text-center text-sm text-black/60 dark:text-white/60">
+      <p className="mt-6 text-center text-sm text-foreground/60">
         会員登録がまだの方は{" "}
         <Link href="/register" className="underline">
           会員登録

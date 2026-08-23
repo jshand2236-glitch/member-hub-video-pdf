@@ -26,7 +26,7 @@ export default async function VideosPage() {
       <h1 className="text-2xl font-bold">会員限定動画</h1>
 
       {allVideos.length === 0 ? (
-        <p className="mt-8 text-sm text-black/60 dark:text-white/60">
+        <p className="mt-8 text-sm text-foreground/60">
           まだ動画が登録されていません。
         </p>
       ) : (
@@ -37,9 +37,9 @@ export default async function VideosPage() {
               <Link
                 key={video.id}
                 href={`/videos/${video.id}`}
-                className="group overflow-hidden rounded-2xl border border-black/10 dark:border-white/10"
+                className="group overflow-hidden rounded-2xl border border-foreground/10"
               >
-                <div className="aspect-video w-full bg-black/5 dark:bg-white/10">
+                <div className="aspect-video w-full bg-foreground/5">
                   {thumb && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -50,9 +50,14 @@ export default async function VideosPage() {
                   )}
                 </div>
                 <div className="p-4">
-                  <h2 className="font-medium">{video.title}</h2>
+                  {video.instructorName && (
+                    <p className="text-xs font-medium text-accent">
+                      {video.instructorName}
+                    </p>
+                  )}
+                  <h2 className="mt-0.5 font-medium">{video.title}</h2>
                   {video.description && (
-                    <p className="mt-1 line-clamp-2 text-sm text-black/60 dark:text-white/60">
+                    <p className="mt-1 line-clamp-2 text-sm text-foreground/60">
                       {video.description}
                     </p>
                   )}

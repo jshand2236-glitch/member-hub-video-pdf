@@ -33,11 +33,11 @@ export default async function DashboardPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
       <h1 className="text-2xl font-bold">マイページ</h1>
-      <p className="mt-1 text-sm text-black/60 dark:text-white/60">
+      <p className="mt-1 text-sm text-foreground/60">
         {session.user.email}
       </p>
 
-      <div className="mt-8 rounded-2xl border border-black/10 p-6 dark:border-white/10">
+      <div className="mt-8 rounded-2xl border border-foreground/10 p-6">
         <h2 className="text-lg font-semibold">会員ステータス</h2>
         {subscription ? (
           <div className="mt-3 space-y-1 text-sm">
@@ -48,14 +48,14 @@ export default async function DashboardPage() {
               </span>
             </p>
             {subscription.currentPeriodEnd && (
-              <p className="text-black/60 dark:text-white/60">
+              <p className="text-foreground/60">
                 次回更新日: {subscription.currentPeriodEnd.toLocaleDateString("ja-JP")}
                 {subscription.cancelAtPeriodEnd && "（この期間で解約予定）"}
               </p>
             )}
           </div>
         ) : (
-          <p className="mt-3 text-sm text-black/60 dark:text-white/60">
+          <p className="mt-3 text-sm text-foreground/60">
             まだ有料プランに登録されていません。
           </p>
         )}
@@ -66,7 +66,7 @@ export default async function DashboardPage() {
           ) : (
             <Link
               href="/pricing"
-              className="rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background hover:opacity-90"
+              className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
             >
               プランに登録する
             </Link>
@@ -78,13 +78,13 @@ export default async function DashboardPage() {
         <div className="mt-8 grid gap-6 sm:grid-cols-2">
           <Link
             href="/videos"
-            className="rounded-2xl border border-black/10 p-6 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"
+            className="rounded-2xl border border-foreground/10 p-6 hover:bg-foreground/5"
           >
             <h3 className="font-semibold">🎥 会員限定動画を見る</h3>
           </Link>
           <Link
             href="/pdfs"
-            className="rounded-2xl border border-black/10 p-6 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"
+            className="rounded-2xl border border-foreground/10 p-6 hover:bg-foreground/5"
           >
             <h3 className="font-semibold">📄 資料PDFを見る</h3>
           </Link>

@@ -30,13 +30,13 @@ export default async function AdminPage() {
   ]);
 
   const inputClass =
-    "mt-1 w-full rounded-lg border border-black/15 bg-transparent px-3 py-2 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
+    "mt-1 w-full rounded-lg border border-foreground/15 bg-transparent px-3 py-2 text-sm outline-none focus:border-foreground/40";
   const labelClass = "block text-sm font-medium";
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
       <h1 className="text-2xl font-bold">管理画面</h1>
-      <p className="mt-1 text-sm text-black/60 dark:text-white/60">
+      <p className="mt-1 text-sm text-foreground/60">
         動画・PDF資料の追加/削除ができます（管理者のみ）。
       </p>
 
@@ -51,6 +51,10 @@ export default async function AdminPage() {
           <div className="sm:col-span-2">
             <label className={labelClass}>説明（任意）</label>
             <textarea name="description" rows={2} className={inputClass} />
+          </div>
+          <div className="sm:col-span-2">
+            <label className={labelClass}>講師名（任意）</label>
+            <input name="instructorName" placeholder="例: 山田 太郎" className={inputClass} />
           </div>
           <div>
             <label className={labelClass}>配信元</label>
@@ -81,19 +85,20 @@ export default async function AdminPage() {
           <div className="sm:col-span-2">
             <button
               type="submit"
-              className="rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background hover:opacity-90"
+              className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
             >
               動画を追加
             </button>
           </div>
         </form>
 
-        <ul className="mt-8 divide-y divide-black/10 dark:divide-white/10">
+        <ul className="mt-8 divide-y divide-foreground/10">
           {allVideos.map((video) => (
             <li key={video.id} className="flex items-center justify-between py-3">
               <div>
                 <p className="font-medium">{video.title}</p>
-                <p className="text-xs text-black/50 dark:text-white/50">
+                <p className="text-xs text-foreground/50">
+                  {video.instructorName ? `${video.instructorName} / ` : ""}
                   {video.provider} / {video.providerVideoId}
                 </p>
               </div>
@@ -101,7 +106,7 @@ export default async function AdminPage() {
                 <input type="hidden" name="id" value={video.id} />
                 <button
                   type="submit"
-                  className="text-sm text-red-600 hover:underline dark:text-red-400"
+                  className="text-sm text-red-600 hover:underline"
                 >
                   削除
                 </button>
@@ -136,25 +141,25 @@ export default async function AdminPage() {
           <div className="sm:col-span-2">
             <button
               type="submit"
-              className="rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background hover:opacity-90"
+              className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
             >
               PDFを追加
             </button>
           </div>
         </form>
 
-        <ul className="mt-8 divide-y divide-black/10 dark:divide-white/10">
+        <ul className="mt-8 divide-y divide-foreground/10">
           {allPdfs.map((doc) => (
             <li key={doc.id} className="flex items-center justify-between py-3">
               <div>
                 <p className="font-medium">{doc.title}</p>
-                <p className="text-xs text-black/50 dark:text-white/50">{doc.url}</p>
+                <p className="text-xs text-foreground/50">{doc.url}</p>
               </div>
               <form action={deletePdfAction}>
                 <input type="hidden" name="id" value={doc.id} />
                 <button
                   type="submit"
-                  className="text-sm text-red-600 hover:underline dark:text-red-400"
+                  className="text-sm text-red-600 hover:underline"
                 >
                   削除
                 </button>

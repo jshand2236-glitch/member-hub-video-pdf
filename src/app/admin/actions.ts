@@ -19,6 +19,7 @@ export async function addVideoAction(formData: FormData) {
 
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const instructorName = String(formData.get("instructorName") ?? "").trim();
   const provider = String(formData.get("provider") ?? "youtube");
   const providerVideoId = String(formData.get("providerVideoId") ?? "").trim();
   const embedHash = String(formData.get("embedHash") ?? "").trim();
@@ -31,6 +32,7 @@ export async function addVideoAction(formData: FormData) {
   await db.insert(videos).values({
     title,
     description: description || null,
+    instructorName: instructorName || null,
     provider,
     providerVideoId,
     embedHash: embedHash || null,

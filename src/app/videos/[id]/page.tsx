@@ -27,13 +27,16 @@ export default async function VideoDetailPage(props: PageProps<"/videos/[id]">) 
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
-      <Link href="/videos" className="text-sm text-black/60 hover:underline dark:text-white/60">
+      <Link href="/videos" className="text-sm text-foreground/60 hover:underline">
         ← 動画一覧へ戻る
       </Link>
 
-      <h1 className="mt-4 text-2xl font-bold">{video.title}</h1>
+      {video.instructorName && (
+        <p className="mt-4 text-sm font-medium text-accent">{video.instructorName}</p>
+      )}
+      <h1 className="mt-1 text-2xl font-bold">{video.title}</h1>
       {video.description && (
-        <p className="mt-2 text-sm text-black/60 dark:text-white/60">{video.description}</p>
+        <p className="mt-2 text-sm text-foreground/60">{video.description}</p>
       )}
 
       <div className="mt-6 aspect-video w-full overflow-hidden rounded-2xl bg-black">

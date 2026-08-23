@@ -13,7 +13,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <Nav />
         <main className="flex-1">{children}</main>
-        <footer className="border-t border-black/10 py-6 text-center text-xs text-black/50 dark:border-white/10 dark:text-white/40">
+        <footer className="border-t border-foreground/10 py-6 text-center text-xs text-foreground/50">
           © {new Date().getFullYear()} Member Hub
         </footer>
       </body>

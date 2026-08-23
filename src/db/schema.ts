@@ -34,6 +34,8 @@ export const videos = pgTable("videos", {
     .$defaultFn(() => crypto.randomUUID()),
   title: text("title").notNull(),
   description: text("description"),
+  // Name of the instructor/presenter featured in this video (optional)
+  instructorName: text("instructor_name"),
   // "youtube" | "vimeo"
   provider: text("provider").notNull(),
   // YouTube video id (e.g. dQw4w9WgXcQ) or Vimeo video id

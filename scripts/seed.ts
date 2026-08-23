@@ -15,6 +15,7 @@ async function main() {
     {
       title: "サンプル動画1（YouTube限定公開）",
       description: "YouTubeの限定公開動画を埋め込むサンプルです。実際の動画IDに差し替えてください。",
+      instructorName: "サンプル講師",
       provider: "youtube",
       providerVideoId: "dQw4w9WgXcQ",
       sortOrder: 0,

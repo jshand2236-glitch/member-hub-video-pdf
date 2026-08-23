@@ -22,10 +22,10 @@ export default async function PricingPage() {
   return (
     <div className="mx-auto max-w-md px-4 py-16 sm:px-6">
       <h1 className="text-2xl font-bold">料金プラン</h1>
-      <div className="mt-8 rounded-2xl border border-black/10 p-6 dark:border-white/10">
+      <div className="mt-8 rounded-2xl border border-foreground/10 p-6">
         <h2 className="text-lg font-semibold">スタンダードプラン</h2>
         <p className="mt-2 text-3xl font-bold">{priceLabel}</p>
-        <ul className="mt-4 space-y-2 text-sm text-black/70 dark:text-white/70">
+        <ul className="mt-4 space-y-2 text-sm text-foreground/70">
           <li>✔ 会員限定動画が見放題</li>
           <li>✔ 会員限定PDF資料が閲覧し放題</li>
           <li>✔ いつでも解約可能</li>

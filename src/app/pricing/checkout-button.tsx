@@ -34,11 +34,11 @@ export default function CheckoutButton({ isLoggedIn }: { isLoggedIn: boolean }) 
       <button
         onClick={handleClick}
         disabled={isPending}
-        className="w-full rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background hover:opacity-90 disabled:opacity-50"
+        className="w-full rounded-full bg-accent px-6 py-3 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
       >
         {isPending ? "処理中..." : isLoggedIn ? "このプランに登録する" : "会員登録して申し込む"}
       </button>
-      {error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
     </div>
   );
 }

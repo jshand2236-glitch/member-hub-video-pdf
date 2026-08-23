@@ -28,11 +28,11 @@ export default function ManageBillingButton() {
       <button
         onClick={handleClick}
         disabled={isPending}
-        className="rounded-full border border-black/15 px-5 py-2.5 text-sm font-medium hover:bg-black/5 disabled:opacity-50 dark:border-white/20 dark:hover:bg-white/10"
+        className="rounded-full border border-foreground/15 px-5 py-2.5 text-sm font-medium hover:bg-foreground/5 disabled:opacity-50"
       >
         {isPending ? "処理中..." : "お支払い管理・解約"}
       </button>
-      {error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
     </div>
   );
 }

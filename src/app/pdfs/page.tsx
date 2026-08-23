@@ -17,7 +17,7 @@ export default async function PdfsPage() {
       <h1 className="text-2xl font-bold">会員限定資料PDF</h1>
 
       {allPdfs.length === 0 ? (
-        <p className="mt-8 text-sm text-black/60 dark:text-white/60">
+        <p className="mt-8 text-sm text-foreground/60">
           まだ資料が登録されていません。
         </p>
       ) : (
@@ -26,11 +26,11 @@ export default async function PdfsPage() {
             <div key={doc.id}>
               <h2 className="font-semibold">{doc.title}</h2>
               {doc.description && (
-                <p className="mt-1 text-sm text-black/60 dark:text-white/60">
+                <p className="mt-1 text-sm text-foreground/60">
                   {doc.description}
                 </p>
               )}
-              <div className="mt-3 overflow-hidden rounded-2xl border border-black/10 dark:border-white/10">
+              <div className="mt-3 overflow-hidden rounded-2xl border border-foreground/10">
                 <iframe
                   src={doc.url}
                   title={doc.title}
@@ -41,7 +41,7 @@ export default async function PdfsPage() {
                 href={doc.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-2 inline-block text-sm underline text-black/60 dark:text-white/60"
+                className="mt-2 inline-block text-sm underline text-foreground/60"
               >
                 新しいタブで開く / ダウンロード
               </a>

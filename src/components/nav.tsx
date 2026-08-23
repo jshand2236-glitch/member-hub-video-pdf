@@ -5,7 +5,7 @@ export default async function Nav() {
   const session = await auth();
 
   return (
-    <header className="border-b border-black/10 dark:border-white/10">
+    <header className="border-b border-foreground/10">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
         <Link href="/" className="text-lg font-semibold tracking-tight">
           Member Hub
@@ -30,7 +30,7 @@ export default async function Nav() {
               >
                 <button
                   type="submit"
-                  className="rounded-full border border-black/15 px-3 py-1.5 text-sm hover:bg-black/5 dark:border-white/20 dark:hover:bg-white/10"
+                  className="rounded-full border border-foreground/15 px-3 py-1.5 text-sm hover:bg-foreground/5"
                 >
                   ログアウト
                 </button>
@@ -46,7 +46,7 @@ export default async function Nav() {
               </Link>
               <Link
                 href="/register"
-                className="rounded-full bg-foreground px-3 py-1.5 text-sm text-background hover:opacity-90"
+                className="rounded-full bg-accent px-3 py-1.5 text-sm text-white hover:opacity-90"
               >
                 会員登録
               </Link>
