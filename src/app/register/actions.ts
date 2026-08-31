@@ -7,6 +7,7 @@ import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { signIn } from "@/auth";
 import { AuthError } from "next-auth";
+import { isFreeAccessMode } from "@/lib/access";
 
 export type RegisterState = {
   error?: string;
@@ -41,11 +42,15 @@ export async function registerAction(
     passwordHash,
   });
 
+  // While pricing isn't finalized (FREE_ACCESS_MODE=true), skip the pricing
+  // page and take new members straight to their dashboard/content instead.
+  const postRegisterPath = isFreeAccessMode() ? "/dashboard" : "/pricing";
+
   try {
     await signIn("credentials", {
       email,
       password,
-      redirectTo: "/pricing",
+      redirectTo: postRegisterPath,
     });
   } catch (error) {
     if (error instanceof AuthError) {
@@ -56,5 +61,5 @@ export async function registerAction(
     throw error;
   }
 
-  redirect("/pricing");
+  redirect(postRegisterPath);
 }

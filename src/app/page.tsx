@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { auth } from "@/auth";
 import { hasActiveSubscription } from "@/lib/subscription";
+import { isFreeAccessMode } from "@/lib/access";
 
 export default async function Home() {
   const session = await auth();
+  const freeAccess = isFreeAccessMode();
   const isSubscribed = session?.user?.id
     ? await hasActiveSubscription(session.user.id)
     : false;
+  const canViewContent = freeAccess || isSubscribed;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-24">
@@ -17,11 +20,13 @@ export default async function Home() {
           いつでもどこでも。
         </h1>
         <p className="mt-6 text-lg text-foreground/70">
-          月額プランに登録すると、限定公開の動画コンテンツと資料PDFがすべて閲覧できるようになります。
+          {freeAccess
+            ? "会員登録すると、限定公開の動画コンテンツと資料PDFがすべて閲覧できるようになります。"
+            : "月額プランに登録すると、限定公開の動画コンテンツと資料PDFがすべて閲覧できるようになります。"}
         </p>
         <div className="mt-8 flex flex-wrap gap-4">
           {session?.user ? (
-            isSubscribed ? (
+            canViewContent ? (
               <Link
                 href="/dashboard"
                 className="rounded-full bg-accent px-6 py-3 text-sm font-medium text-white hover:opacity-90"
@@ -36,6 +41,13 @@ export default async function Home() {
                 プランに登録する
               </Link>
             )
+          ) : freeAccess ? (
+            <Link
+              href="/register"
+              className="rounded-full bg-accent px-6 py-3 text-sm font-medium text-white hover:opacity-90"
+            >
+              会員登録して始める
+            </Link>
           ) : (
             <>
               <Link
