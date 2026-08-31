@@ -90,13 +90,15 @@ export default async function DashboardPage() {
             href="/videos"
             className="rounded-2xl border border-foreground/10 p-6 hover:bg-foreground/5"
           >
-            <h3 className="font-semibold">🎥 会員限定動画を見る</h3>
+            <span className="text-xs font-medium tracking-widest text-accent">VIDEO</span>
+            <h3 className="mt-1 font-semibold">会員限定動画を見る</h3>
           </Link>
           <Link
             href="/pdfs"
             className="rounded-2xl border border-foreground/10 p-6 hover:bg-foreground/5"
           >
-            <h3 className="font-semibold">📄 資料PDFを見る</h3>
+            <span className="text-xs font-medium tracking-widest text-accent">DOCUMENT</span>
+            <h3 className="mt-1 font-semibold">資料PDFを見る</h3>
           </Link>
         </div>
       )}

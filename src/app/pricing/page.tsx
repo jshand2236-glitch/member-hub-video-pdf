@@ -26,9 +26,18 @@ export default async function PricingPage() {
         <h2 className="text-lg font-semibold">スタンダードプラン</h2>
         <p className="mt-2 text-3xl font-bold">{priceLabel}</p>
         <ul className="mt-4 space-y-2 text-sm text-foreground/70">
-          <li>✔ 会員限定動画が見放題</li>
-          <li>✔ 会員限定PDF資料が閲覧し放題</li>
-          <li>✔ いつでも解約可能</li>
+          <li className="flex items-center gap-2.5">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden="true" />
+            会員限定動画が見放題
+          </li>
+          <li className="flex items-center gap-2.5">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden="true" />
+            会員限定PDF資料が閲覧し放題
+          </li>
+          <li className="flex items-center gap-2.5">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden="true" />
+            いつでも解約可能
+          </li>
         </ul>
         <div className="mt-6">
           <CheckoutButton isLoggedIn={!!session?.user} />

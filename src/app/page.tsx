@@ -69,13 +69,15 @@ export default async function Home() {
 
       <div className="mt-20 grid gap-8 sm:grid-cols-2">
         <div className="rounded-2xl border border-foreground/10 p-6">
-          <h2 className="text-lg font-semibold">🎥 限定動画</h2>
+          <span className="text-xs font-medium tracking-widest text-accent">VIDEO</span>
+          <h2 className="mt-1 text-lg font-semibold">限定動画</h2>
           <p className="mt-2 text-sm text-foreground/60">
             会員だけが視聴できる限定公開動画を配信します。
           </p>
         </div>
         <div className="rounded-2xl border border-foreground/10 p-6">
-          <h2 className="text-lg font-semibold">📄 資料PDF</h2>
+          <span className="text-xs font-medium tracking-widest text-accent">DOCUMENT</span>
+          <h2 className="mt-1 text-lg font-semibold">資料PDF</h2>
           <p className="mt-2 text-sm text-foreground/60">
             会員限定の資料をブラウザ上でそのまま閲覧できます。
           </p>
