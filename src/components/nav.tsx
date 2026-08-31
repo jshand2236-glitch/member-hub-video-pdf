@@ -11,6 +11,9 @@ export default async function Nav() {
           Member Hub
         </Link>
         <nav className="flex items-center gap-5 text-sm">
+          <Link href="/instructors" className="hover:underline">
+            講師紹介
+          </Link>
           {session?.user ? (
             <>
               <Link href="/dashboard" className="hover:underline">

@@ -3,6 +3,7 @@ import { requireActiveSubscriber } from "@/lib/require-subscriber";
 import { db } from "@/db";
 import { videos } from "@/db/schema";
 import { asc } from "drizzle-orm";
+import { findInstructor } from "@/data/instructors";
 
 export const metadata = {
   title: "会員限定動画 | Member Hub",
@@ -16,6 +17,28 @@ function thumbnailFor(video: Video) {
     return `https://img.youtube.com/vi/${video.providerVideoId}/hqdefault.jpg`;
   }
   return null;
+}
+
+function InstructorBlurb({ name }: { name: string }) {
+  const profile = findInstructor(name);
+  if (!profile) return null;
+  return (
+    <div className="mt-2 max-w-2xl">
+      <p className="text-sm text-foreground/60">
+        {profile.title}
+        {profile.qualifications.length > 0 && (
+          <span> ／ {profile.qualifications.join("・")}</span>
+        )}
+      </p>
+      <p className="mt-2 text-sm leading-relaxed text-foreground/70">{profile.bio}</p>
+      <Link
+        href={`/instructors#${profile.slug}`}
+        className="mt-2 inline-block text-sm font-medium text-accent hover:underline"
+      >
+        プロフィールを見る →
+      </Link>
+    </div>
+  );
 }
 
 function VideoCard({ video }: { video: Video }) {
@@ -85,9 +108,12 @@ export default async function VideosPage() {
       ) : !showGrouped ? (
         <>
           {groupEntries[0].name !== "講師未設定" && (
-            <p className="mt-2 text-sm font-medium text-accent">
-              講師: {groupEntries[0].name}
-            </p>
+            <>
+              <p className="mt-2 text-sm font-medium text-accent">
+                講師: {groupEntries[0].name}
+              </p>
+              <InstructorBlurb name={groupEntries[0].name} />
+            </>
           )}
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {allVideos.map((video) => (
@@ -117,6 +143,7 @@ export default async function VideosPage() {
                   INSTRUCTOR
                 </h2>
                 <p className="mt-1 font-serif text-xl font-semibold">{group.name}</p>
+                <InstructorBlurb name={group.name} />
                 <div className="mt-5 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   {group.videos.map((video) => (
                     <VideoCard key={video.id} video={video} />
