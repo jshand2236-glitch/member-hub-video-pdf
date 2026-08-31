@@ -8,7 +8,9 @@ export const metadata = {
   title: "会員限定動画 | Member Hub",
 };
 
-function thumbnailFor(video: typeof videos.$inferSelect) {
+type Video = typeof videos.$inferSelect;
+
+function thumbnailFor(video: Video) {
   if (video.thumbnailUrl) return video.thumbnailUrl;
   if (video.provider === "youtube") {
     return `https://img.youtube.com/vi/${video.providerVideoId}/hqdefault.jpg`;
@@ -16,10 +18,61 @@ function thumbnailFor(video: typeof videos.$inferSelect) {
   return null;
 }
 
+function VideoCard({ video }: { video: Video }) {
+  const thumb = thumbnailFor(video);
+  return (
+    <Link
+      href={`/videos/${video.id}`}
+      className="group overflow-hidden rounded-2xl border border-foreground/10"
+    >
+      <div className="aspect-video w-full bg-foreground/5">
+        {thumb && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={thumb}
+            alt={video.title}
+            className="h-full w-full object-cover transition group-hover:opacity-80"
+          />
+        )}
+      </div>
+      <div className="p-4">
+        <h3 className="font-medium">{video.title}</h3>
+        {video.description && (
+          <p className="mt-1 line-clamp-2 text-sm text-foreground/60">
+            {video.description}
+          </p>
+        )}
+      </div>
+    </Link>
+  );
+}
+
 export default async function VideosPage() {
   await requireActiveSubscriber("/videos");
 
   const allVideos = await db.select().from(videos).orderBy(asc(videos.sortOrder));
+
+  // Group videos by instructor (in the order each instructor's first video
+  // appears, which follows the admin-controlled sortOrder) so that, once
+  // several instructors' videos are mixed together, members can jump
+  // straight to the one they're looking for instead of scrolling a single
+  // long grid.
+  const groups = new Map<string, Video[]>();
+  for (const video of allVideos) {
+    const key = video.instructorName?.trim() || "講師未設定";
+    const existing = groups.get(key);
+    if (existing) {
+      existing.push(video);
+    } else {
+      groups.set(key, [video]);
+    }
+  }
+  const groupEntries = Array.from(groups.entries()).map(([name, list], index) => ({
+    id: `instructor-${index}`,
+    name,
+    videos: list,
+  }));
+  const showGrouped = groupEntries.length > 1;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
@@ -29,43 +82,50 @@ export default async function VideosPage() {
         <p className="mt-8 text-sm text-foreground/60">
           まだ動画が登録されていません。
         </p>
+      ) : !showGrouped ? (
+        <>
+          {groupEntries[0].name !== "講師未設定" && (
+            <p className="mt-2 text-sm font-medium text-accent">
+              講師: {groupEntries[0].name}
+            </p>
+          )}
+          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {allVideos.map((video) => (
+              <VideoCard key={video.id} video={video} />
+            ))}
+          </div>
+        </>
       ) : (
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {allVideos.map((video) => {
-            const thumb = thumbnailFor(video);
-            return (
-              <Link
-                key={video.id}
-                href={`/videos/${video.id}`}
-                className="group overflow-hidden rounded-2xl border border-foreground/10"
+        <>
+          <nav className="mt-8 flex flex-wrap gap-2" aria-label="講師で絞り込み">
+            {groupEntries.map((group) => (
+              <a
+                key={group.id}
+                href={`#${group.id}`}
+                className="rounded-full border border-foreground/15 px-4 py-1.5 text-sm hover:bg-foreground/5"
               >
-                <div className="aspect-video w-full bg-foreground/5">
-                  {thumb && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={thumb}
-                      alt={video.title}
-                      className="h-full w-full object-cover transition group-hover:opacity-80"
-                    />
-                  )}
+                {group.name}
+                <span className="ml-1.5 text-foreground/40">{group.videos.length}</span>
+              </a>
+            ))}
+          </nav>
+
+          <div className="mt-4 space-y-14">
+            {groupEntries.map((group) => (
+              <section key={group.id} id={group.id} className="scroll-mt-20">
+                <h2 className="text-xs font-medium tracking-widest text-accent">
+                  INSTRUCTOR
+                </h2>
+                <p className="mt-1 font-serif text-xl font-semibold">{group.name}</p>
+                <div className="mt-5 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {group.videos.map((video) => (
+                    <VideoCard key={video.id} video={video} />
+                  ))}
                 </div>
-                <div className="p-4">
-                  {video.instructorName && (
-                    <p className="text-xs font-medium text-accent">
-                      {video.instructorName}
-                    </p>
-                  )}
-                  <h2 className="mt-0.5 font-medium">{video.title}</h2>
-                  {video.description && (
-                    <p className="mt-1 line-clamp-2 text-sm text-foreground/60">
-                      {video.description}
-                    </p>
-                  )}
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+              </section>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
