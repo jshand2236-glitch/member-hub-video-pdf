@@ -12,7 +12,7 @@ import {
 } from "./actions";
 
 export const metadata = {
-  title: "管理画面 | Member Hub",
+  title: "管理画面 | AAM Fukuoka",
 };
 
 export default async function AdminPage() {
@@ -30,13 +30,13 @@ export default async function AdminPage() {
   ]);
 
   const inputClass =
-    "mt-1 w-full rounded-lg border border-foreground/15 bg-transparent px-3 py-2 text-sm outline-none focus:border-foreground/40";
+    "mt-1 w-full rounded-[4px] border border-line bg-transparent px-3 py-2 text-sm outline-none focus:border-accent";
   const labelClass = "block text-sm font-medium";
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
-      <h1 className="text-2xl font-bold">管理画面</h1>
-      <p className="mt-1 text-sm text-foreground/60">
+      <h1 className="font-serif text-2xl font-semibold">管理画面</h1>
+      <p className="mt-1 text-sm text-muted">
         動画・PDF資料の追加/削除ができます（管理者のみ）。
       </p>
 
@@ -85,19 +85,19 @@ export default async function AdminPage() {
           <div className="sm:col-span-2">
             <button
               type="submit"
-              className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
+              className="rounded-[4px] bg-accent px-5 py-2.5 text-sm font-medium text-white hover:bg-accent-hover"
             >
               動画を追加
             </button>
           </div>
         </form>
 
-        <ul className="mt-8 divide-y divide-foreground/10">
+        <ul className="mt-8 divide-y divide-line">
           {allVideos.map((video) => (
             <li key={video.id} className="flex items-center justify-between py-3">
               <div>
                 <p className="font-medium">{video.title}</p>
-                <p className="text-xs text-foreground/50">
+                <p className="text-xs text-muted">
                   {video.instructorName ? `${video.instructorName} / ` : ""}
                   {video.provider} / {video.providerVideoId}
                 </p>
@@ -141,19 +141,19 @@ export default async function AdminPage() {
           <div className="sm:col-span-2">
             <button
               type="submit"
-              className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
+              className="rounded-[4px] bg-accent px-5 py-2.5 text-sm font-medium text-white hover:bg-accent-hover"
             >
               PDFを追加
             </button>
           </div>
         </form>
 
-        <ul className="mt-8 divide-y divide-foreground/10">
+        <ul className="mt-8 divide-y divide-line">
           {allPdfs.map((doc) => (
             <li key={doc.id} className="flex items-center justify-between py-3">
               <div>
                 <p className="font-medium">{doc.title}</p>
-                <p className="text-xs text-foreground/50">{doc.url}</p>
+                <p className="text-xs text-muted">{doc.url}</p>
               </div>
               <form action={deletePdfAction}>
                 <input type="hidden" name="id" value={doc.id} />

@@ -21,7 +21,7 @@ export default function LoginForm({ callbackUrl }: { callbackUrl: string }) {
           type="email"
           required
           autoComplete="email"
-          className="mt-1 w-full rounded-lg border border-foreground/15 bg-transparent px-3 py-2 text-sm outline-none focus:border-foreground/40"
+          className="mt-1 w-full rounded-[4px] border border-line bg-transparent px-3 py-2 text-sm outline-none focus:border-accent"
         />
       </div>
       <div>
@@ -34,7 +34,7 @@ export default function LoginForm({ callbackUrl }: { callbackUrl: string }) {
           type="password"
           required
           autoComplete="current-password"
-          className="mt-1 w-full rounded-lg border border-foreground/15 bg-transparent px-3 py-2 text-sm outline-none focus:border-foreground/40"
+          className="mt-1 w-full rounded-[4px] border border-line bg-transparent px-3 py-2 text-sm outline-none focus:border-accent"
         />
       </div>
 
@@ -43,7 +43,7 @@ export default function LoginForm({ callbackUrl }: { callbackUrl: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-full bg-accent px-6 py-3 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+        className="w-full rounded-[4px] bg-accent px-6 py-3 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
       >
         {pending ? "ログイン中..." : "ログイン"}
       </button>

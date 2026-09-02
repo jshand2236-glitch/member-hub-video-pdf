@@ -28,7 +28,7 @@ export default function ManageBillingButton() {
       <button
         onClick={handleClick}
         disabled={isPending}
-        className="rounded-full border border-foreground/15 px-5 py-2.5 text-sm font-medium hover:bg-foreground/5 disabled:opacity-50"
+        className="rounded-[4px] border border-line px-5 py-2.5 text-sm font-medium hover:bg-soft disabled:opacity-50"
       >
         {isPending ? "処理中..." : "お支払い管理・解約"}
       </button>

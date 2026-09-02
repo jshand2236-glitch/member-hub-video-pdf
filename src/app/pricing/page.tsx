@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import CheckoutButton from "./checkout-button";
 
 export const metadata = {
-  title: "料金プラン | Member Hub",
+  title: "料金プラン | AAM Fukuoka",
 };
 
 export default async function PricingPage() {
@@ -21,11 +21,12 @@ export default async function PricingPage() {
 
   return (
     <div className="mx-auto max-w-md px-4 py-16 sm:px-6">
-      <h1 className="text-2xl font-bold">料金プラン</h1>
-      <div className="mt-8 rounded-2xl border border-foreground/10 p-6">
+      <span className="eyebrow">Plan</span>
+      <h1 className="mt-2 font-serif text-2xl font-semibold sm:text-3xl">料金プラン</h1>
+      <div className="mt-8 rounded-[4px] border border-line p-6">
         <h2 className="text-lg font-semibold">スタンダードプラン</h2>
         <p className="mt-2 text-3xl font-bold">{priceLabel}</p>
-        <ul className="mt-4 space-y-2 text-sm text-foreground/70">
+        <ul className="mt-4 space-y-2 text-sm text-muted">
           <li className="flex items-center gap-2.5">
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden="true" />
             会員限定動画が見放題

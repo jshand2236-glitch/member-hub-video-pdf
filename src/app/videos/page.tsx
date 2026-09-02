@@ -6,7 +6,7 @@ import { asc } from "drizzle-orm";
 import { findInstructor } from "@/data/instructors";
 
 export const metadata = {
-  title: "会員限定動画 | Member Hub",
+  title: "会員限定動画 | AAM Fukuoka",
 };
 
 type Video = typeof videos.$inferSelect;
@@ -24,13 +24,13 @@ function InstructorBlurb({ name }: { name: string }) {
   if (!profile) return null;
   return (
     <div className="mt-2 max-w-2xl">
-      <p className="text-sm text-foreground/60">
+      <p className="text-sm text-muted">
         {profile.title}
         {profile.qualifications.length > 0 && (
           <span> ／ {profile.qualifications.join("・")}</span>
         )}
       </p>
-      <p className="mt-2 text-sm leading-relaxed text-foreground/70">{profile.bio}</p>
+      <p className="mt-2 text-sm leading-relaxed text-muted">{profile.bio}</p>
       <Link
         href={`/instructors#${profile.slug}`}
         className="mt-2 inline-block text-sm font-medium text-accent hover:underline"
@@ -46,9 +46,9 @@ function VideoCard({ video }: { video: Video }) {
   return (
     <Link
       href={`/videos/${video.id}`}
-      className="group overflow-hidden rounded-2xl border border-foreground/10"
+      className="group overflow-hidden rounded-[4px] border border-line"
     >
-      <div className="aspect-video w-full bg-foreground/5">
+      <div className="aspect-video w-full bg-soft">
         {thumb && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -61,7 +61,7 @@ function VideoCard({ video }: { video: Video }) {
       <div className="p-4">
         <h3 className="font-medium">{video.title}</h3>
         {video.description && (
-          <p className="mt-1 line-clamp-2 text-sm text-foreground/60">
+          <p className="mt-1 line-clamp-2 text-sm text-muted">
             {video.description}
           </p>
         )}
@@ -99,10 +99,11 @@ export default async function VideosPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
-      <h1 className="text-2xl font-bold">会員限定動画</h1>
+      <span className="eyebrow">Video</span>
+      <h1 className="mt-2 font-serif text-2xl font-semibold sm:text-3xl">会員限定動画</h1>
 
       {allVideos.length === 0 ? (
-        <p className="mt-8 text-sm text-foreground/60">
+        <p className="mt-8 text-sm text-muted">
           まだ動画が登録されていません。
         </p>
       ) : !showGrouped ? (
@@ -128,10 +129,10 @@ export default async function VideosPage() {
               <a
                 key={group.id}
                 href={`#${group.id}`}
-                className="rounded-full border border-foreground/15 px-4 py-1.5 text-sm hover:bg-foreground/5"
+                className="rounded-[4px] border border-line px-4 py-1.5 text-sm hover:bg-soft"
               >
                 {group.name}
-                <span className="ml-1.5 text-foreground/40">{group.videos.length}</span>
+                <span className="ml-1.5 text-muted">{group.videos.length}</span>
               </a>
             ))}
           </nav>
@@ -139,7 +140,7 @@ export default async function VideosPage() {
           <div className="mt-4 space-y-14">
             {groupEntries.map((group) => (
               <section key={group.id} id={group.id} className="scroll-mt-20">
-                <h2 className="text-xs font-medium tracking-widest text-accent">
+                <h2 className="eyebrow">
                   INSTRUCTOR
                 </h2>
                 <p className="mt-1 font-serif text-xl font-semibold">{group.name}</p>

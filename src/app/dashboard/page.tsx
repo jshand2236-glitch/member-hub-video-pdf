@@ -6,7 +6,7 @@ import { isFreeAccessMode } from "@/lib/access";
 import ManageBillingButton from "./manage-billing-button";
 
 export const metadata = {
-  title: "マイページ | Member Hub",
+  title: "マイページ | AAM Fukuoka",
 };
 
 const STATUS_LABEL_JA: Record<string, string> = {
@@ -40,13 +40,14 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
-      <h1 className="text-2xl font-bold">マイページ</h1>
-      <p className="mt-1 text-sm text-foreground/60">
+      <span className="eyebrow">My page</span>
+      <h1 className="mt-2 font-serif text-2xl font-semibold sm:text-3xl">マイページ</h1>
+      <p className="mt-1 text-sm text-muted">
         {session.user.email}
       </p>
 
       {!freeAccess && (
-        <div className="mt-8 rounded-2xl border border-foreground/10 p-6">
+        <div className="mt-8 rounded-[4px] border border-line p-6">
           <h2 className="text-lg font-semibold">会員ステータス</h2>
           {subscription ? (
             <div className="mt-3 space-y-1 text-sm">
@@ -57,14 +58,14 @@ export default async function DashboardPage() {
                 </span>
               </p>
               {subscription.currentPeriodEnd && (
-                <p className="text-foreground/60">
+                <p className="text-muted">
                   次回更新日: {subscription.currentPeriodEnd.toLocaleDateString("ja-JP")}
                   {subscription.cancelAtPeriodEnd && "（この期間で解約予定）"}
                 </p>
               )}
             </div>
           ) : (
-            <p className="mt-3 text-sm text-foreground/60">
+            <p className="mt-3 text-sm text-muted">
               まだ有料プランに登録されていません。
             </p>
           )}
@@ -75,7 +76,7 @@ export default async function DashboardPage() {
             ) : (
               <Link
                 href="/pricing"
-                className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
+                className="rounded-[4px] bg-accent px-5 py-2.5 text-sm font-medium text-white hover:bg-accent-hover"
               >
                 プランに登録する
               </Link>
@@ -88,16 +89,16 @@ export default async function DashboardPage() {
         <div className="mt-8 grid gap-6 sm:grid-cols-2">
           <Link
             href="/videos"
-            className="rounded-2xl border border-foreground/10 p-6 hover:bg-foreground/5"
+            className="rounded-[4px] border border-line p-6 hover:bg-soft"
           >
-            <span className="text-xs font-medium tracking-widest text-accent">VIDEO</span>
+            <span className="eyebrow">VIDEO</span>
             <h3 className="mt-1 font-semibold">会員限定動画を見る</h3>
           </Link>
           <Link
             href="/pdfs"
-            className="rounded-2xl border border-foreground/10 p-6 hover:bg-foreground/5"
+            className="rounded-[4px] border border-line p-6 hover:bg-soft"
           >
-            <span className="text-xs font-medium tracking-widest text-accent">DOCUMENT</span>
+            <span className="eyebrow">DOCUMENT</span>
             <h3 className="mt-1 font-semibold">資料PDFを見る</h3>
           </Link>
         </div>
