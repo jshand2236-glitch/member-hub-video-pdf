@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { requireActiveSubscriber } from "@/lib/require-subscriber";
 import { db } from "@/db";
@@ -23,20 +24,31 @@ function InstructorBlurb({ name }: { name: string }) {
   const profile = findInstructor(name);
   if (!profile) return null;
   return (
-    <div className="mt-2 max-w-2xl">
-      <p className="text-sm text-muted">
-        {profile.title}
-        {profile.qualifications.length > 0 && (
-          <span> ／ {profile.qualifications.join("・")}</span>
-        )}
-      </p>
-      <p className="mt-2 text-sm leading-relaxed text-muted">{profile.bio}</p>
-      <Link
-        href={`/instructors#${profile.slug}`}
-        className="mt-2 inline-block text-sm font-medium text-accent hover:underline"
-      >
-        プロフィールを見る →
-      </Link>
+    <div className="mt-3 flex max-w-2xl gap-4">
+      <div className="relative hidden aspect-[3/4] w-20 shrink-0 overflow-hidden bg-soft sm:block">
+        <Image
+          src={profile.photo}
+          alt={`${profile.name}さんの写真`}
+          fill
+          sizes="80px"
+          className="object-cover"
+        />
+      </div>
+      <div>
+        <p className="text-sm text-muted">
+          {profile.title}
+          {profile.qualifications.length > 0 && (
+            <span> ／ {profile.qualifications.join("・")}</span>
+          )}
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-muted">{profile.bio}</p>
+        <Link
+          href={`/instructors#${profile.slug}`}
+          className="mt-2 inline-block font-sans text-xs tracking-[0.18em] text-accent hover:underline"
+        >
+          プロフィールを見る →
+        </Link>
+      </div>
     </div>
   );
 }

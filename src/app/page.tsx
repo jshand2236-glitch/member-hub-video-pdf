@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { auth } from "@/auth";
 import { hasActiveSubscription } from "@/lib/subscription";
@@ -26,7 +27,7 @@ export default async function Home() {
   return (
     <>
       {/* ヒーロー */}
-      <section className="relative overflow-hidden bg-[linear-gradient(100deg,#001e50_0%,#00306f_46%,#004098_100%)]">
+      <section className="relative overflow-hidden bg-[linear-gradient(100deg,#091326_0%,#0e1b34_46%,#16264a_100%)]">
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.18]"
           style={{
@@ -48,7 +49,7 @@ export default async function Home() {
             福岡の医療者が学び続けるための環境が、ここにあります。
           </p>
           <div className="mt-10 flex flex-wrap gap-4">
-            <Link href={primaryHref} className="btn bg-white text-navy hover:bg-white/90">
+            <Link href={primaryHref} className="btn btn-primary">
               {primaryLabel}
             </Link>
             <Link href="/instructors" className="btn btn-light">
@@ -137,14 +138,25 @@ export default async function Home() {
               <Link
                 key={instructor.slug}
                 href={`/instructors#${instructor.slug}`}
-                className="border border-line bg-background p-6 transition hover:border-accent"
+                className="group border border-line bg-background transition hover:border-accent"
               >
-                <span className="font-sans text-[10px] tracking-[0.28em] text-muted">
-                  {instructor.nameReading}
-                </span>
-                <h3 className="mt-2 font-serif text-lg font-semibold">{instructor.name}</h3>
-                <p className="mt-3 text-xs leading-relaxed text-muted">{instructor.title}</p>
-                <p className="mt-1 text-xs text-muted">専門：{instructor.specialty}</p>
+                <div className="relative aspect-[3/4] w-full overflow-hidden bg-soft">
+                  <Image
+                    src={instructor.photo}
+                    alt={`${instructor.name}さんの写真`}
+                    fill
+                    sizes="(max-width: 640px) 100vw, 33vw"
+                    className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                  />
+                </div>
+                <div className="p-6">
+                  <span className="font-sans text-[10px] tracking-[0.28em] text-muted">
+                    {instructor.nameReading}
+                  </span>
+                  <h3 className="mt-2 font-serif text-lg font-semibold">{instructor.name}</h3>
+                  <p className="mt-3 text-xs leading-relaxed text-muted">{instructor.title}</p>
+                  <p className="mt-1 text-xs text-muted">専門：{instructor.specialty}</p>
+                </div>
               </Link>
             ))}
           </div>
@@ -161,7 +173,7 @@ export default async function Home() {
       </section>
 
       {/* CTA */}
-      <section className="bg-[linear-gradient(100deg,#001e50_0%,#004098_100%)]">
+      <section className="bg-[linear-gradient(100deg,#091326_0%,#16264a_100%)]">
         <div className="mx-auto max-w-3xl px-4 py-20 text-center sm:px-6">
           <span className="eyebrow eyebrow-light">Join us</span>
           <h2 className="mt-4 font-serif text-2xl font-semibold text-white sm:text-3xl">
@@ -173,7 +185,7 @@ export default async function Home() {
               : "月額プランに登録すると、限定公開の動画と資料PDFをすべてご覧いただけます。"}
           </p>
           <div className="mt-10 flex flex-wrap justify-center gap-4">
-            <Link href={primaryHref} className="btn bg-white text-navy hover:bg-white/90">
+            <Link href={primaryHref} className="btn btn-primary">
               {primaryLabel}
             </Link>
             {!session?.user && (
