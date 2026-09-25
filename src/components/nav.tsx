@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { auth, signOut } from "@/auth";
+import { isAdminEmail } from "@/lib/admin";
 
 export default async function Nav() {
   const session = await auth();
+  const isAdmin = isAdminEmail(session?.user?.email);
 
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-background/95 backdrop-blur">
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
+      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-y-3 px-4 py-4 sm:flex-nowrap sm:px-6">
         <Link href="/" className="leading-tight">
           <span className="block font-serif text-lg font-semibold tracking-[0.18em]">
             AAM Fukuoka
@@ -15,8 +17,8 @@ export default async function Nav() {
             MEMBERS
           </span>
         </Link>
-        <nav className="flex items-center gap-5 text-sm">
-          <Link href="/instructors" className="hidden hover:text-accent sm:block">
+        <nav className="flex w-full flex-wrap items-center gap-x-4 gap-y-2 text-sm whitespace-nowrap sm:w-auto sm:flex-nowrap sm:gap-5">
+          <Link href="/instructors" className="hover:text-accent">
             講師紹介
           </Link>
           {session?.user ? (
@@ -30,6 +32,14 @@ export default async function Nav() {
               <Link href="/pdfs" className="hover:text-accent">
                 資料PDF
               </Link>
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className="rounded-[4px] border border-accent px-3 py-1.5 text-xs tracking-wider text-accent hover:bg-accent hover:text-white"
+                >
+                  管理画面
+                </Link>
+              )}
               <form
                 action={async () => {
                   "use server";
