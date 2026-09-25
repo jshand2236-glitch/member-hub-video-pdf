@@ -4,8 +4,8 @@ import { isAdminEmail } from "@/lib/admin";
 import { db } from "@/db";
 import { videos, pdfDocuments } from "@/db/schema";
 import { asc } from "drizzle-orm";
+import PdfUploadForm from "./pdf-upload-form";
 import {
-  addPdfAction,
   addVideoAction,
   deletePdfAction,
   deleteVideoAction,
@@ -119,41 +119,16 @@ export default async function AdminPage() {
       {/* PDFs */}
       <section className="mt-16">
         <h2 className="text-lg font-semibold">PDF資料を追加</h2>
-        <form action={addPdfAction} className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <label className={labelClass}>タイトル</label>
-            <input name="title" required className={inputClass} />
-          </div>
-          <div className="sm:col-span-2">
-            <label className={labelClass}>説明（任意）</label>
-            <textarea name="description" rows={2} className={inputClass} />
-          </div>
-          <div className="sm:col-span-2">
-            <label className={labelClass}>
-              PDFのURL（/public 配下のパス、または外部URL）
-            </label>
-            <input name="url" required placeholder="/pdfs/sample.pdf" className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>並び順（小さい順）</label>
-            <input name="sortOrder" type="number" defaultValue={0} className={inputClass} />
-          </div>
-          <div className="sm:col-span-2">
-            <button
-              type="submit"
-              className="rounded-[4px] bg-accent px-5 py-2.5 text-sm font-medium text-white hover:bg-accent-hover"
-            >
-              PDFを追加
-            </button>
-          </div>
-        </form>
+        <PdfUploadForm />
 
         <ul className="mt-8 divide-y divide-line">
           {allPdfs.map((doc) => (
             <li key={doc.id} className="flex items-center justify-between py-3">
               <div>
                 <p className="font-medium">{doc.title}</p>
-                <p className="text-xs text-muted">{doc.url}</p>
+                <p className="text-xs text-muted">
+                  {doc.url.startsWith("/api/pdfs/") ? "アップロード済みファイル（会員限定）" : doc.url}
+                </p>
               </div>
               <form action={deletePdfAction}>
                 <input type="hidden" name="id" value={doc.id} />

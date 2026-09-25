@@ -6,6 +6,7 @@ import { isAdminEmail } from "@/lib/admin";
 import { db } from "@/db";
 import { videos, pdfDocuments } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { deletePdf, storedPdfKeyFromUrl } from "@/lib/pdf-storage";
 
 async function assertAdmin() {
   const session = await auth();
@@ -79,7 +80,11 @@ export async function deletePdfAction(formData: FormData) {
   await assertAdmin();
   const id = String(formData.get("id") ?? "");
   if (!id) return;
+  const [doc] = await db.select().from(pdfDocuments).where(eq(pdfDocuments.id, id)).limit(1);
   await db.delete(pdfDocuments).where(eq(pdfDocuments.id, id));
+  // Also remove the file itself if it was uploaded into our private storage.
+  const key = doc ? storedPdfKeyFromUrl(doc.url) : null;
+  if (key) await deletePdf(key);
   revalidatePath("/admin");
   revalidatePath("/pdfs");
 }

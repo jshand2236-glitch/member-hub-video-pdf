@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 _update.zip
+
+# local stand-in for Netlify Blobs (member PDFs)
+/.data
