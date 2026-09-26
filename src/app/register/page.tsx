@@ -3,7 +3,7 @@ import RegisterForm from "./register-form";
 import { isFreeAccessMode } from "@/lib/access";
 
 export const metadata = {
-  title: "会員登録 | AAM Fukuoka",
+  title: "会員登録 | FMC",
 };
 
 export default function RegisterPage() {

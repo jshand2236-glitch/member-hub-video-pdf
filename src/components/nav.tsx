@@ -10,11 +10,11 @@ export default async function Nav() {
     <header className="sticky top-0 z-50 border-b border-line bg-background/95 backdrop-blur">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-y-3 px-4 py-4 sm:flex-nowrap sm:px-6">
         <Link href="/" className="leading-tight">
-          <span className="block font-serif text-lg font-semibold tracking-[0.18em]">
-            AAM Fukuoka
+          <span className="block font-serif text-base font-semibold tracking-[0.12em] sm:text-lg sm:tracking-[0.14em]">
+            FUKUOKA MEDICAL CONNECT
           </span>
-          <span className="hidden text-[10px] tracking-[0.28em] text-muted sm:block">
-            MEMBERS
+          <span className="block font-sans text-[10px] tracking-[0.28em] text-muted">
+            FMC MEMBERS
           </span>
         </Link>
         <nav className="flex w-full flex-wrap items-center gap-x-4 gap-y-2 text-sm whitespace-nowrap sm:w-auto sm:flex-nowrap sm:gap-5">

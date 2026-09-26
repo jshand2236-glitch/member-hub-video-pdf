@@ -6,7 +6,7 @@ import { isFreeAccessMode } from "@/lib/access";
 import ManageBillingButton from "./manage-billing-button";
 
 export const metadata = {
-  title: "マイページ | AAM Fukuoka",
+  title: "マイページ | FMC",
 };
 
 const STATUS_LABEL_JA: Record<string, string> = {

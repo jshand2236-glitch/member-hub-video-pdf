@@ -37,7 +37,7 @@ export default async function Home() {
           aria-hidden="true"
         />
         <div className="relative mx-auto flex min-h-[74vh] max-w-5xl flex-col justify-center px-4 py-24 sm:px-6">
-          <span className="eyebrow eyebrow-light">AAM Fukuoka Members</span>
+          <span className="eyebrow eyebrow-light">Fukuoka Medical Connect</span>
           <h1 className="mt-6 font-serif text-3xl font-semibold text-white sm:text-5xl sm:leading-[1.45]">
             医療者として、
             <br />
@@ -110,7 +110,7 @@ export default async function Home() {
       {/* コンセプト */}
       <section className="bg-background">
         <div className="mx-auto max-w-3xl px-4 py-20 text-center sm:px-6 sm:py-24">
-          <span className="eyebrow">What is AAM Fukuoka</span>
+          <span className="eyebrow">What is FMC</span>
           <h2 className="mt-4 font-serif text-2xl font-semibold sm:text-3xl">
             学びを、行動へ。
             <br />
@@ -154,8 +154,10 @@ export default async function Home() {
                     {instructor.nameReading}
                   </span>
                   <h3 className="mt-2 font-serif text-lg font-semibold">{instructor.name}</h3>
-                  <p className="mt-3 text-xs leading-relaxed text-muted">{instructor.title}</p>
-                  <p className="mt-1 text-xs text-muted">専門：{instructor.specialty}</p>
+                  {instructor.title && (
+                    <p className="mt-3 text-xs leading-relaxed text-muted">{instructor.title}</p>
+                  )}
+                  <p className={`${instructor.title ? "mt-1" : "mt-3"} text-xs text-muted`}>専門：{instructor.specialty}</p>
                 </div>
               </Link>
             ))}

@@ -42,11 +42,11 @@ export async function requestPasswordReset(
     try {
       await sendMail({
         to: user.email,
-        subject: "【AAM Fukuoka】パスワード再設定のご案内",
+        subject: "【FMC】パスワード再設定のご案内",
         text: [
           `${user.name ? `${user.name} 様` : "会員様"}`,
           "",
-          "AAM Fukuoka をご利用いただきありがとうございます。",
+          "FUKUOKA MEDICAL CONNECT（FMC）をご利用いただきありがとうございます。",
           "以下のリンクから新しいパスワードを設定してください。",
           "",
           link,
@@ -54,12 +54,12 @@ export async function requestPasswordReset(
           `※ このリンクの有効期限は${minutes}分です。`,
           "※ お心当たりのない場合は、このメールを破棄してください。パスワードは変更されません。",
           "",
-          "AAM Fukuoka",
+          "FUKUOKA MEDICAL CONNECT（FMC）",
         ].join("\n"),
         html: `
           <div style="font-family:sans-serif;line-height:1.8;color:#1c2436">
             <p>${user.name ? `${escapeHtml(user.name)} 様` : "会員様"}</p>
-            <p>AAM Fukuoka をご利用いただきありがとうございます。<br>
+            <p>FUKUOKA MEDICAL CONNECT（FMC）をご利用いただきありがとうございます。<br>
             以下のボタンから新しいパスワードを設定してください。</p>
             <p style="margin:28px 0">
               <a href="${link}" style="background:#bf9b5a;color:#fff;padding:12px 28px;border-radius:4px;text-decoration:none;display:inline-block">
@@ -74,7 +74,7 @@ export async function requestPasswordReset(
               ※ このリンクの有効期限は${minutes}分です。<br>
               ※ お心当たりのない場合は、このメールを破棄してください。パスワードは変更されません。
             </p>
-            <p>AAM Fukuoka</p>
+            <p>FUKUOKA MEDICAL CONNECT（FMC）</p>
           </div>`,
       });
     } catch (err) {

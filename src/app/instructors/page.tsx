@@ -2,7 +2,7 @@ import Image from "next/image";
 import { INSTRUCTORS } from "@/data/instructors";
 
 export const metadata = {
-  title: "講師紹介 | AAM Fukuoka",
+  title: "講師紹介 | FMC",
 };
 
 export default function InstructorsPage() {
@@ -49,8 +49,8 @@ export default function InstructorsPage() {
                     {instructor.nameReading}
                   </p>
 
-                  <p className="mt-5 text-sm font-medium">{instructor.title}</p>
-                  <p className="mt-1 text-sm text-muted">
+                  {instructor.title && <p className="mt-5 text-sm font-medium">{instructor.title}</p>}
+                  <p className={`${instructor.title ? "mt-1" : "mt-5"} text-sm text-muted`}>
                     {instructor.qualifications.join("・")}
                     {instructor.specialty && (
                       <span> ／ 専門：{instructor.specialty}</span>

@@ -9,7 +9,7 @@ import { BODY_PARTS, UNCATEGORIZED, findBodyPart } from "@/data/body-parts";
 import FilterChip from "@/components/filter-chip";
 
 export const metadata = {
-  title: "会員限定動画 | AAM Fukuoka",
+  title: "会員限定動画 | FMC",
 };
 
 type Video = typeof videos.$inferSelect;

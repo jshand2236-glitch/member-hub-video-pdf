@@ -16,7 +16,7 @@ import {
 } from "./actions";
 
 export const metadata = {
-  title: "管理画面 | AAM Fukuoka",
+  title: "管理画面 | FMC",
 };
 
 export default async function AdminPage() {

@@ -22,11 +22,11 @@ export function queueWelcomeEmail(user: { email: string; name?: string | null })
     try {
       await sendMail({
         to: user.email,
-        subject: "【AAM Fukuoka】会員登録が完了しました",
+        subject: "【FMC】会員登録が完了しました",
         text: [
           greeting,
           "",
-          "このたびは AAM Fukuoka にご登録いただき、ありがとうございます。",
+          "このたびは FUKUOKA MEDICAL CONNECT（FMC）にご登録いただき、ありがとうございます。",
           "会員登録が完了しました。ログインすると、会員限定の動画講義と資料PDFをご覧いただけます。",
           "",
           `■ ログイン　　　　${base}/login`,
@@ -40,14 +40,14 @@ export function queueWelcomeEmail(user: { email: string; name?: string | null })
           "※ このメールは送信専用です。",
           "※ お心当たりのない場合は、お手数ですがこのメールを破棄してください。",
           "",
-          "AAM Fukuoka",
+          "FUKUOKA MEDICAL CONNECT（FMC）",
         ].join("\n"),
         html: `
           <div style="font-family:sans-serif;line-height:1.8;color:#1c2436;max-width:560px">
             <p style="font-size:12px;letter-spacing:.2em;color:#bf9b5a;margin:0 0 4px">WELCOME</p>
             <p style="font-size:18px;font-weight:bold;margin:0 0 20px">会員登録が完了しました</p>
             <p>${escapeHtml(greeting)}</p>
-            <p>このたびは AAM Fukuoka にご登録いただき、ありがとうございます。<br>
+            <p>このたびは FUKUOKA MEDICAL CONNECT（FMC）にご登録いただき、ありがとうございます。<br>
             ログインすると、会員限定の動画講義と資料PDFをご覧いただけます。</p>
             <p style="margin:28px 0">
               <a href="${base}/videos" style="background:#bf9b5a;color:#fff;padding:12px 28px;border-radius:4px;text-decoration:none;display:inline-block">
@@ -68,7 +68,7 @@ export function queueWelcomeEmail(user: { email: string; name?: string | null })
               ※ このメールは送信専用です。<br>
               ※ お心当たりのない場合は、お手数ですがこのメールを破棄してください。
             </p>
-            <p>AAM Fukuoka</p>
+            <p>FUKUOKA MEDICAL CONNECT（FMC）</p>
           </div>`,
       });
     } catch (err) {

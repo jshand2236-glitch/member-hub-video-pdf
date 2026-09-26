@@ -15,8 +15,8 @@ export type Instructor = {
   photo: string;
   /** 顔を中心に切り抜いた正方形の写真（小さい丸アイコン用） */
   avatar: string;
-  /** 肩書き・所属 */
-  title: string;
+  /** 肩書き・所属（無い場合は省略） */
+  title?: string;
   /** 保有資格 */
   qualifications: string[];
   /** 専門分野 */
@@ -54,7 +54,6 @@ export const INSTRUCTORS: Instructor[] = [
     avatar: "/instructors/aoyagi-face.jpg",
     name: "青柳 達也",
     nameReading: "AOYAGI TATSUYA",
-    title: "SCL鍼灸整骨院",
     qualifications: ["柔道整復師", "はり師", "きゅう師"],
     specialty: "身体操作",
     bio: "福岡県朝倉市出身。トップアスリートの現場で研鑽を積んだトレーナー。サッカー日本代表、世界陸上日本人ファイナリスト、バドミントン元世界ランク1位など、国内外の一線級選手をサポートしてきた実績を持つ。",

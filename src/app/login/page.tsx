@@ -2,7 +2,7 @@ import Link from "next/link";
 import LoginForm from "./login-form";
 
 export const metadata = {
-  title: "ログイン | AAM Fukuoka",
+  title: "ログイン | FMC",
 };
 
 export default async function LoginPage(props: PageProps<"/login">) {

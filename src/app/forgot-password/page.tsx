@@ -2,7 +2,7 @@ import Link from "next/link";
 import ForgotForm from "./forgot-form";
 
 export const metadata = {
-  title: "パスワードをお忘れの方 | AAM Fukuoka",
+  title: "パスワードをお忘れの方 | FMC",
 };
 
 export default function ForgotPasswordPage() {

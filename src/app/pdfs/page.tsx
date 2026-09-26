@@ -7,7 +7,7 @@ import { BODY_PARTS, UNCATEGORIZED, findBodyPart } from "@/data/body-parts";
 import FilterChip from "@/components/filter-chip";
 
 export const metadata = {
-  title: "会員限定資料PDF | AAM Fukuoka",
+  title: "会員限定資料PDF | FMC",
 };
 
 type Doc = typeof pdfDocuments.$inferSelect;

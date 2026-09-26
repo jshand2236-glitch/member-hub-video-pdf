@@ -3,7 +3,7 @@ import { verifyResetToken } from "@/lib/password-reset";
 import ResetForm from "./reset-form";
 
 export const metadata = {
-  title: "パスワードの再設定 | AAM Fukuoka",
+  title: "パスワードの再設定 | FMC",
 };
 
 export default async function ResetPasswordPage(props: PageProps<"/reset-password">) {

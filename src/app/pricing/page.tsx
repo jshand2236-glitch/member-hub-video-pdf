@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import CheckoutButton from "./checkout-button";
 
 export const metadata = {
-  title: "料金プラン | AAM Fukuoka",
+  title: "料金プラン | FMC",
 };
 
 export default async function PricingPage() {

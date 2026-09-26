@@ -4,7 +4,7 @@ import Nav from "@/components/nav";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AAM Fukuoka | 会員限定動画・資料",
+  title: "FUKUOKA MEDICAL CONNECT（FMC）| 会員限定動画・資料",
   description:
     "医療者が学び続けるための会員制プラットフォーム。会員限定の動画講義と資料PDFを、いつでもどこでも。",
 };
@@ -18,8 +18,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <footer className="border-t border-line bg-soft">
           <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <div>
-              <p className="font-serif text-base font-semibold tracking-[0.18em]">
-                AAM Fukuoka
+              <p className="font-serif text-base font-semibold tracking-[0.14em]">
+                FUKUOKA MEDICAL CONNECT
+                <span className="ml-2 font-sans text-[11px] font-normal tracking-[0.2em] text-muted">FMC</span>
               </p>
               <p className="mt-1 text-xs text-muted">
                 学び続ける医療者のための、会員制プラットフォーム
@@ -38,7 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             </div>
           </div>
           <div className="border-t border-line py-4 text-center text-[11px] tracking-widest text-muted">
-            © {new Date().getFullYear()} AAM Fukuoka
+            © {new Date().getFullYear()} FUKUOKA MEDICAL CONNECT
           </div>
         </footer>
       </body>

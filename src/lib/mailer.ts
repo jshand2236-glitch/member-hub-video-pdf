@@ -8,7 +8,7 @@ import nodemailer from "nodemailer";
  *   SMTP_PORT=465
  *   SMTP_USER=you@gmail.com
  *   SMTP_PASS=<16-character app password>
- *   MAIL_FROM="AAM Fukuoka" <you@gmail.com>   (optional)
+ *   MAIL_FROM="FUKUOKA MEDICAL CONNECT" <you@gmail.com>   (optional)
  */
 export function isMailConfigured(): boolean {
   return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
@@ -24,7 +24,7 @@ export async function sendMail(options: { to: string; subject: string; text: str
   });
 
   await transporter.sendMail({
-    from: process.env.MAIL_FROM || `"AAM Fukuoka" <${process.env.SMTP_USER}>`,
+    from: process.env.MAIL_FROM || `"FUKUOKA MEDICAL CONNECT" <${process.env.SMTP_USER}>`,
     ...options,
   });
 }
