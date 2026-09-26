@@ -13,6 +13,8 @@ export type Instructor = {
   nameReading: string;
   /** 宣材写真 (public/instructors/ 配下) */
   photo: string;
+  /** 顔を中心に切り抜いた正方形の写真（小さい丸アイコン用） */
+  avatar: string;
   /** 肩書き・所属 */
   title: string;
   /** 保有資格 */
@@ -31,6 +33,7 @@ export const INSTRUCTORS: Instructor[] = [
   {
     slug: "arata-takuya",
     photo: "/instructors/arata.jpg",
+    avatar: "/instructors/arata-face.jpg",
     name: "安良田 卓也",
     nameReading: "ARATA TAKUYA",
     title: "ARATA鍼灸整骨院 院長",
@@ -48,6 +51,7 @@ export const INSTRUCTORS: Instructor[] = [
   {
     slug: "aoyagi-tatsuya",
     photo: "/instructors/aoyagi.jpg",
+    avatar: "/instructors/aoyagi-face.jpg",
     name: "青柳 達也",
     nameReading: "AOYAGI TATSUYA",
     title: "SCL鍼灸整骨院",
@@ -65,6 +69,7 @@ export const INSTRUCTORS: Instructor[] = [
   {
     slug: "miyagi-norihisa",
     photo: "/instructors/miyagi.jpg",
+    avatar: "/instructors/miyagi-face.jpg",
     name: "宮城 徳久",
     nameReading: "MIYAGI NORIHISA",
     title: "鍼灸整体院サロンMiN 代表",

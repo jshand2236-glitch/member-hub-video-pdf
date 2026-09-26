@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { videos, pdfDocuments } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { deletePdf, storedPdfKeyFromUrl } from "@/lib/pdf-storage";
+import { isBodyPartSlug } from "@/data/body-parts";
 
 async function assertAdmin() {
   const session = await auth();
@@ -21,6 +22,7 @@ export async function addVideoAction(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const instructorName = String(formData.get("instructorName") ?? "").trim();
+  const bodyPartRaw = String(formData.get("bodyPart") ?? "");
   const provider = String(formData.get("provider") ?? "youtube");
   const providerVideoId = String(formData.get("providerVideoId") ?? "").trim();
   const embedHash = String(formData.get("embedHash") ?? "").trim();
@@ -34,12 +36,26 @@ export async function addVideoAction(formData: FormData) {
     title,
     description: description || null,
     instructorName: instructorName || null,
+    bodyPart: isBodyPartSlug(bodyPartRaw) ? bodyPartRaw : null,
     provider,
     providerVideoId,
     embedHash: embedHash || null,
     sortOrder: Number.parseInt(sortOrderRaw, 10) || 0,
   });
 
+  revalidatePath("/admin");
+  revalidatePath("/videos");
+}
+
+export async function updateVideoBodyPartAction(formData: FormData) {
+  await assertAdmin();
+  const id = String(formData.get("id") ?? "");
+  const bodyPartRaw = String(formData.get("bodyPart") ?? "");
+  if (!id) return;
+  await db
+    .update(videos)
+    .set({ bodyPart: isBodyPartSlug(bodyPartRaw) ? bodyPartRaw : null })
+    .where(eq(videos.id, id));
   revalidatePath("/admin");
   revalidatePath("/videos");
 }

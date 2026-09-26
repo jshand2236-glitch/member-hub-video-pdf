@@ -5,8 +5,11 @@ import { db } from "@/db";
 import { videos, pdfDocuments } from "@/db/schema";
 import { asc } from "drizzle-orm";
 import PdfUploadForm from "./pdf-upload-form";
+import { BODY_PARTS, findBodyPart } from "@/data/body-parts";
+import { INSTRUCTORS } from "@/data/instructors";
 import {
   addVideoAction,
+  updateVideoBodyPartAction,
   deletePdfAction,
   deleteVideoAction,
 } from "./actions";
@@ -52,9 +55,32 @@ export default async function AdminPage() {
             <label className={labelClass}>説明（任意）</label>
             <textarea name="description" rows={2} className={inputClass} />
           </div>
-          <div className="sm:col-span-2">
-            <label className={labelClass}>講師名（任意）</label>
-            <input name="instructorName" placeholder="例: 山田 太郎" className={inputClass} />
+          <div>
+            <label className={labelClass}>部位</label>
+            <select name="bodyPart" required defaultValue="" className={inputClass}>
+              <option value="" disabled>
+                選択してください
+              </option>
+              {BODY_PARTS.map((p) => (
+                <option key={p.slug} value={p.slug}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>講師名</label>
+            <input
+              name="instructorName"
+              list="instructor-names"
+              placeholder="例: 安良田 卓也"
+              className={inputClass}
+            />
+            <datalist id="instructor-names">
+              {INSTRUCTORS.map((i) => (
+                <option key={i.slug} value={i.name} />
+              ))}
+            </datalist>
           </div>
           <div>
             <label className={labelClass}>配信元</label>
@@ -94,14 +120,34 @@ export default async function AdminPage() {
 
         <ul className="mt-8 divide-y divide-line">
           {allVideos.map((video) => (
-            <li key={video.id} className="flex items-center justify-between py-3">
-              <div>
+            <li key={video.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+              <div className="min-w-0 flex-1">
                 <p className="font-medium">{video.title}</p>
                 <p className="text-xs text-muted">
-                  {video.instructorName ? `${video.instructorName} / ` : ""}
-                  {video.provider} / {video.providerVideoId}
+                  {findBodyPart(video.bodyPart)?.label ?? "未分類"}
+                  {video.instructorName ? ` / ${video.instructorName}` : ""}
+                  {` / ${video.provider} / ${video.providerVideoId}`}
                 </p>
               </div>
+              <form action={updateVideoBodyPartAction} className="flex items-center gap-2">
+                <input type="hidden" name="id" value={video.id} />
+                <select
+                  name="bodyPart"
+                  defaultValue={video.bodyPart ?? ""}
+                  aria-label="部位"
+                  className="rounded-[4px] border border-line bg-transparent px-2 py-1 text-xs outline-none focus:border-accent"
+                >
+                  <option value="">未分類</option>
+                  {BODY_PARTS.map((p) => (
+                    <option key={p.slug} value={p.slug}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+                <button type="submit" className="text-xs text-accent hover:underline">
+                  部位を変更
+                </button>
+              </form>
               <form action={deleteVideoAction}>
                 <input type="hidden" name="id" value={video.id} />
                 <button

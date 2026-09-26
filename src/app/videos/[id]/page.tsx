@@ -4,6 +4,7 @@ import { requireActiveSubscriber } from "@/lib/require-subscriber";
 import { db } from "@/db";
 import { videos } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { findBodyPart } from "@/data/body-parts";
 
 function buildEmbedUrl(video: typeof videos.$inferSelect): string {
   if (video.provider === "youtube") {
@@ -24,16 +25,27 @@ export default async function VideoDetailPage(props: PageProps<"/videos/[id]">) 
   }
 
   const embedUrl = buildEmbedUrl(video);
+  const part = findBodyPart(video.bodyPart);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
-      <Link href="/videos" className="text-sm text-muted hover:underline">
-        ← 動画一覧へ戻る
-      </Link>
+      <nav aria-label="パンくず" className="text-sm text-muted">
+        <Link href="/videos" className="hover:underline">
+          動画一覧
+        </Link>
+        {part && (
+          <>
+            <span className="mx-2">/</span>
+            <Link href={`/videos?part=${part.slug}`} className="hover:underline">
+              {part.label}
+            </Link>
+          </>
+        )}
+      </nav>
 
-      {video.instructorName && (
-        <p className="mt-4 text-sm font-medium text-accent">{video.instructorName}</p>
-      )}
+      <p className="mt-4 text-sm font-medium text-accent">
+        {[part?.label, video.instructorName].filter(Boolean).join(" ・ ")}
+      </p>
       <h1 className="mt-1 font-serif text-2xl font-semibold">{video.title}</h1>
       {video.description && (
         <p className="mt-2 text-sm text-muted">{video.description}</p>

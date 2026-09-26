@@ -1,16 +1,18 @@
 import Image from "next/image";
 import Link from "next/link";
+import { asc } from "drizzle-orm";
 import { requireActiveSubscriber } from "@/lib/require-subscriber";
 import { db } from "@/db";
 import { videos } from "@/db/schema";
-import { asc } from "drizzle-orm";
 import { findInstructor } from "@/data/instructors";
+import { BODY_PARTS, UNCATEGORIZED, findBodyPart } from "@/data/body-parts";
 
 export const metadata = {
   title: "会員限定動画 | AAM Fukuoka",
 };
 
 type Video = typeof videos.$inferSelect;
+type Group = { slug: string; label: string; en: string; videos: Video[] };
 
 function thumbnailFor(video: Video) {
   if (video.thumbnailUrl) return video.thumbnailUrl;
@@ -20,146 +22,133 @@ function thumbnailFor(video: Video) {
   return null;
 }
 
-function InstructorBlurb({ name }: { name: string }) {
-  const profile = findInstructor(name);
-  if (!profile) return null;
-  return (
-    <div className="mt-3 flex max-w-2xl gap-4">
-      <div className="relative hidden aspect-[3/4] w-20 shrink-0 overflow-hidden bg-soft sm:block">
-        <Image
-          src={profile.photo}
-          alt={`${profile.name}さんの写真`}
-          fill
-          sizes="80px"
-          className="object-cover"
-        />
-      </div>
-      <div>
-        <p className="text-sm text-muted">
-          {profile.title}
-          {profile.qualifications.length > 0 && (
-            <span> ／ {profile.qualifications.join("・")}</span>
-          )}
-        </p>
-        <p className="mt-2 text-sm leading-relaxed text-muted">{profile.bio}</p>
-        <Link
-          href={`/instructors#${profile.slug}`}
-          className="mt-2 inline-block font-sans text-xs tracking-[0.18em] text-accent hover:underline"
-        >
-          プロフィールを見る →
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-function VideoCard({ video }: { video: Video }) {
+function VideoCard({ video, showPart }: { video: Video; showPart: boolean }) {
   const thumb = thumbnailFor(video);
+  const part = findBodyPart(video.bodyPart);
+  const instructor = video.instructorName ? findInstructor(video.instructorName) : undefined;
+
   return (
     <Link
       href={`/videos/${video.id}`}
-      className="group overflow-hidden rounded-[4px] border border-line"
+      className="group flex flex-col overflow-hidden rounded-[4px] border border-line bg-background transition hover:border-accent"
     >
-      <div className="aspect-video w-full bg-soft">
+      <div className="relative aspect-video w-full overflow-hidden bg-soft">
         {thumb && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={thumb}
-            alt={video.title}
-            className="h-full w-full object-cover transition group-hover:opacity-80"
+            alt=""
+            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
           />
         )}
+        {showPart && part && (
+          <span className="absolute left-2 top-2 rounded-[3px] bg-navy/85 px-2 py-0.5 text-[11px] tracking-wider text-white">
+            {part.label}
+          </span>
+        )}
       </div>
-      <div className="p-4">
-        <h3 className="font-medium">{video.title}</h3>
+      <div className="flex flex-1 flex-col p-4">
+        <h3 className="font-medium leading-snug">{video.title}</h3>
         {video.description && (
-          <p className="mt-1 line-clamp-2 text-sm text-muted">
-            {video.description}
-          </p>
+          <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-muted">{video.description}</p>
+        )}
+        {video.instructorName && (
+          <div className="mt-auto flex items-center gap-2 pt-4">
+            {instructor ? (
+              <span className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full bg-soft">
+                <Image src={instructor.avatar} alt="" fill sizes="28px" className="object-cover" />
+              </span>
+            ) : null}
+            <span className="text-xs text-muted">{video.instructorName}</span>
+          </div>
         )}
       </div>
     </Link>
   );
 }
 
-export default async function VideosPage() {
+function Chip({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      scroll={false}
+      aria-current={active ? "page" : undefined}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-4 py-1.5 text-sm transition ${
+        active
+          ? "border-navy bg-navy text-white"
+          : "border-line bg-background hover:border-accent hover:text-accent"
+      }`}
+    >
+      {children}
+    </Link>
+  );
+}
+
+export default async function VideosPage(props: PageProps<"/videos">) {
   await requireActiveSubscriber("/videos");
+  const searchParams = await props.searchParams;
+  const partParam = Array.isArray(searchParams?.part) ? searchParams.part[0] : searchParams?.part;
 
   const allVideos = await db.select().from(videos).orderBy(asc(videos.sortOrder));
 
-  // Group videos by instructor (in the order each instructor's first video
-  // appears, which follows the admin-controlled sortOrder) so that, once
-  // several instructors' videos are mixed together, members can jump
-  // straight to the one they're looking for instead of scrolling a single
-  // long grid.
-  const groups = new Map<string, Video[]>();
-  for (const video of allVideos) {
-    const key = video.instructorName?.trim() || "講師未設定";
-    const existing = groups.get(key);
-    if (existing) {
-      existing.push(video);
-    } else {
-      groups.set(key, [video]);
-    }
-  }
-  const groupEntries = Array.from(groups.entries()).map(([name, list], index) => ({
-    id: `instructor-${index}`,
-    name,
-    videos: list,
-  }));
-  const showGrouped = groupEntries.length > 1;
+  // Group by body part, in head-to-foot order; videos without a part go last.
+  const groups: Group[] = [
+    ...BODY_PARTS.map((p) => ({ ...p, videos: allVideos.filter((v) => v.bodyPart === p.slug) })),
+    { ...UNCATEGORIZED, videos: allVideos.filter((v) => !findBodyPart(v.bodyPart)) },
+  ].filter((g) => g.videos.length > 0);
+
+  const selected = groups.find((g) => g.slug === partParam);
+  const visibleGroups = selected ? [selected] : groups;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
       <span className="eyebrow">Video</span>
       <h1 className="mt-2 font-serif text-2xl font-semibold sm:text-3xl">会員限定動画</h1>
+      <p className="mt-3 text-sm text-muted">部位を選ぶと、その部位の動画だけを表示します。</p>
 
       {allVideos.length === 0 ? (
-        <p className="mt-8 text-sm text-muted">
-          まだ動画が登録されていません。
-        </p>
-      ) : !showGrouped ? (
-        <>
-          {groupEntries[0].name !== "講師未設定" && (
-            <>
-              <p className="mt-2 text-sm font-medium text-accent">
-                講師: {groupEntries[0].name}
-              </p>
-              <InstructorBlurb name={groupEntries[0].name} />
-            </>
-          )}
-          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {allVideos.map((video) => (
-              <VideoCard key={video.id} video={video} />
-            ))}
-          </div>
-        </>
+        <p className="mt-10 text-sm text-muted">まだ動画が登録されていません。</p>
       ) : (
         <>
-          <nav className="mt-8 flex flex-wrap gap-2" aria-label="講師で絞り込み">
-            {groupEntries.map((group) => (
-              <a
-                key={group.id}
-                href={`#${group.id}`}
-                className="rounded-[4px] border border-line px-4 py-1.5 text-sm hover:bg-soft"
-              >
-                {group.name}
-                <span className="ml-1.5 text-muted">{group.videos.length}</span>
-              </a>
+          <nav aria-label="部位で絞り込み" className="mt-8 flex flex-wrap gap-2">
+            <Chip href="/videos" active={!selected}>
+              すべて <span className={selected ? "text-muted" : "text-white/70"}>{allVideos.length}</span>
+            </Chip>
+            {groups.map((g) => (
+              <Chip key={g.slug} href={`/videos?part=${g.slug}`} active={selected?.slug === g.slug}>
+                {g.label}{" "}
+                <span className={selected?.slug === g.slug ? "text-white/70" : "text-muted"}>
+                  {g.videos.length}
+                </span>
+              </Chip>
             ))}
           </nav>
 
-          <div className="mt-4 space-y-14">
-            {groupEntries.map((group) => (
-              <section key={group.id} id={group.id} className="scroll-mt-20">
-                <h2 className="eyebrow">
-                  INSTRUCTOR
-                </h2>
-                <p className="mt-1 font-serif text-xl font-semibold">{group.name}</p>
-                <InstructorBlurb name={group.name} />
-                <div className="mt-5 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {group.videos.map((video) => (
-                    <VideoCard key={video.id} video={video} />
+          <div className="mt-12 space-y-16">
+            {visibleGroups.map((g) => (
+              <section key={g.slug} id={g.slug} aria-labelledby={`h-${g.slug}`}>
+                <div className="flex items-end justify-between gap-4 border-b border-line pb-3">
+                  <div>
+                    <span className="eyebrow">{g.en}</span>
+                    <h2 id={`h-${g.slug}`} className="mt-1 font-serif text-xl font-semibold">
+                      {g.label}
+                      <span className="ml-2 font-sans text-sm font-normal text-muted">
+                        {g.videos.length}本
+                      </span>
+                    </h2>
+                  </div>
+                  {!selected && groups.length > 1 && (
+                    <Link
+                      href={`/videos?part=${g.slug}`}
+                      className="shrink-0 font-sans text-xs tracking-[0.12em] text-accent hover:underline"
+                    >
+                      この部位だけ見る →
+                    </Link>
+                  )}
+                </div>
+                <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {g.videos.map((video) => (
+                    <VideoCard key={video.id} video={video} showPart={false} />
                   ))}
                 </div>
               </section>

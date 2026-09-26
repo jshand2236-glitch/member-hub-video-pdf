@@ -36,6 +36,8 @@ export const videos = pgTable("videos", {
   description: text("description"),
   // Name of the instructor/presenter featured in this video (optional)
   instructorName: text("instructor_name"),
+  // Body part slug from src/data/body-parts.ts (e.g. "lumbar"); null = 未分類
+  bodyPart: text("body_part"),
   // "youtube" | "vimeo"
   provider: text("provider").notNull(),
   // YouTube video id (e.g. dQw4w9WgXcQ) or Vimeo video id
