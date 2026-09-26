@@ -92,6 +92,23 @@ export async function addPdfAction(formData: FormData) {
   revalidatePath("/pdfs");
 }
 
+export async function updatePdfMetaAction(formData: FormData) {
+  await assertAdmin();
+  const id = String(formData.get("id") ?? "");
+  const bodyPartRaw = String(formData.get("bodyPart") ?? "");
+  const disease = String(formData.get("disease") ?? "").trim();
+  if (!id) return;
+  await db
+    .update(pdfDocuments)
+    .set({
+      bodyPart: isBodyPartSlug(bodyPartRaw) ? bodyPartRaw : null,
+      disease: disease || null,
+    })
+    .where(eq(pdfDocuments.id, id));
+  revalidatePath("/admin");
+  revalidatePath("/pdfs");
+}
+
 export async function deletePdfAction(formData: FormData) {
   await assertAdmin();
   const id = String(formData.get("id") ?? "");

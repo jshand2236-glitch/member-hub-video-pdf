@@ -11,6 +11,7 @@ import {
   addVideoAction,
   updateVideoBodyPartAction,
   deletePdfAction,
+  updatePdfMetaAction,
   deleteVideoAction,
 } from "./actions";
 
@@ -165,17 +166,48 @@ export default async function AdminPage() {
       {/* PDFs */}
       <section className="mt-16">
         <h2 className="text-lg font-semibold">PDF資料を追加</h2>
-        <PdfUploadForm />
+        <PdfUploadForm
+          diseases={[...new Set(allPdfs.map((d) => d.disease).filter((d): d is string => !!d))].sort()}
+        />
 
         <ul className="mt-8 divide-y divide-line">
           {allPdfs.map((doc) => (
-            <li key={doc.id} className="flex items-center justify-between py-3">
-              <div>
+            <li key={doc.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+              <div className="min-w-0 flex-1">
                 <p className="font-medium">{doc.title}</p>
                 <p className="text-xs text-muted">
-                  {doc.url.startsWith("/api/pdfs/") ? "アップロード済みファイル（会員限定）" : doc.url}
+                  {findBodyPart(doc.bodyPart)?.label ?? "未分類"}
+                  {doc.disease ? ` / ${doc.disease}` : ""}
+                  {doc.url.startsWith("/api/pdfs/") ? "" : ` / ${doc.url}`}
                 </p>
               </div>
+              <form action={updatePdfMetaAction} className="flex flex-wrap items-center gap-2">
+                <input type="hidden" name="id" value={doc.id} />
+                <select
+                  name="bodyPart"
+                  defaultValue={doc.bodyPart ?? ""}
+                  aria-label="部位"
+                  className="rounded-[4px] border border-line bg-transparent px-2 py-1 text-xs outline-none focus:border-accent"
+                >
+                  <option value="">未分類</option>
+                  {BODY_PARTS.map((p) => (
+                    <option key={p.slug} value={p.slug}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  name="disease"
+                  defaultValue={doc.disease ?? ""}
+                  list="pdf-diseases"
+                  placeholder="疾患名"
+                  aria-label="疾患名"
+                  className="w-40 rounded-[4px] border border-line bg-transparent px-2 py-1 text-xs outline-none focus:border-accent"
+                />
+                <button type="submit" className="text-xs text-accent hover:underline">
+                  変更
+                </button>
+              </form>
               <form action={deletePdfAction}>
                 <input type="hidden" name="id" value={doc.id} />
                 <button

@@ -57,6 +57,10 @@ export const pdfDocuments = pgTable("pdf_documents", {
   description: text("description"),
   // URL to the PDF file (e.g. /pdfs/foo.pdf served from /public, or an external signed URL)
   url: text("url").notNull(),
+  // Body part slug from src/data/body-parts.ts (e.g. "lumbar"); null = 未分類
+  bodyPart: text("body_part"),
+  // Condition this document is about, e.g. "腰椎椎間板ヘルニア" (free text)
+  disease: text("disease"),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });

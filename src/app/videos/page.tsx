@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { videos } from "@/db/schema";
 import { findInstructor } from "@/data/instructors";
 import { BODY_PARTS, UNCATEGORIZED, findBodyPart } from "@/data/body-parts";
+import FilterChip from "@/components/filter-chip";
 
 export const metadata = {
   title: "会員限定動画 | AAM Fukuoka",
@@ -67,23 +68,6 @@ function VideoCard({ video, showPart }: { video: Video; showPart: boolean }) {
   );
 }
 
-function Chip({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
-  return (
-    <Link
-      href={href}
-      scroll={false}
-      aria-current={active ? "page" : undefined}
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-4 py-1.5 text-sm transition ${
-        active
-          ? "border-navy bg-navy text-white"
-          : "border-line bg-background hover:border-accent hover:text-accent"
-      }`}
-    >
-      {children}
-    </Link>
-  );
-}
-
 export default async function VideosPage(props: PageProps<"/videos">) {
   await requireActiveSubscriber("/videos");
   const searchParams = await props.searchParams;
@@ -111,16 +95,15 @@ export default async function VideosPage(props: PageProps<"/videos">) {
       ) : (
         <>
           <nav aria-label="部位で絞り込み" className="mt-8 flex flex-wrap gap-2">
-            <Chip href="/videos" active={!selected}>
-              すべて <span className={selected ? "text-muted" : "text-white/70"}>{allVideos.length}</span>
-            </Chip>
+            <FilterChip href="/videos" active={!selected} label="すべて" count={allVideos.length} />
             {groups.map((g) => (
-              <Chip key={g.slug} href={`/videos?part=${g.slug}`} active={selected?.slug === g.slug}>
-                {g.label}{" "}
-                <span className={selected?.slug === g.slug ? "text-white/70" : "text-muted"}>
-                  {g.videos.length}
-                </span>
-              </Chip>
+              <FilterChip
+                key={g.slug}
+                href={`/videos?part=${g.slug}`}
+                active={selected?.slug === g.slug}
+                label={g.label}
+                count={g.videos.length}
+              />
             ))}
           </nav>
 

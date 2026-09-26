@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { BODY_PARTS } from "@/data/body-parts";
 
 // Must match PDF_CHUNK_SIZE / PDF_MAX_PARTS in src/lib/pdf-storage.ts
 const CHUNK_SIZE = 3 * 1024 * 1024;
@@ -11,7 +12,7 @@ const labelClass = "block text-sm font-medium";
 const inputClass =
   "mt-1 w-full rounded-[4px] border border-line bg-transparent px-3 py-2 text-sm outline-none focus:border-accent";
 
-export default function PdfUploadForm() {
+export default function PdfUploadForm({ diseases }: { diseases: string[] }) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [status, setStatus] = useState<{ kind: "idle" | "busy" | "done" | "error"; message?: string }>({
@@ -60,6 +61,8 @@ export default function PdfUploadForm() {
           filename: file.name,
           title: String(data.get("title") ?? ""),
           description: String(data.get("description") ?? ""),
+          bodyPart: String(data.get("bodyPart") ?? ""),
+          disease: String(data.get("disease") ?? ""),
           sortOrder: Number.parseInt(String(data.get("sortOrder") ?? "0"), 10) || 0,
         }),
       });
@@ -80,6 +83,35 @@ export default function PdfUploadForm() {
       <div className="sm:col-span-2">
         <label className={labelClass}>タイトル</label>
         <input name="title" required className={inputClass} />
+      </div>
+      <div>
+        <label className={labelClass}>部位</label>
+        <select name="bodyPart" required defaultValue="" className={inputClass}>
+          <option value="" disabled>
+            選択してください
+          </option>
+          {BODY_PARTS.map((p) => (
+            <option key={p.slug} value={p.slug}>
+              {p.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className={labelClass}>疾患名</label>
+        <input
+          name="disease"
+          required
+          list="pdf-diseases"
+          placeholder="例: 腰椎椎間板ヘルニア"
+          className={inputClass}
+        />
+        <datalist id="pdf-diseases">
+          {diseases.map((d) => (
+            <option key={d} value={d} />
+          ))}
+        </datalist>
+        <p className="mt-1 text-xs text-muted">同じ疾患の資料は同じ表記にすると、まとめて表示されます。</p>
       </div>
       <div className="sm:col-span-2">
         <label className={labelClass}>説明（任意）</label>

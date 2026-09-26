@@ -6,6 +6,7 @@ import { isAdminEmail } from "@/lib/admin";
 import { db } from "@/db";
 import { pdfDocuments } from "@/db/schema";
 import { finalizePdf, PDF_KEY_PATTERN, PDF_MAX_PARTS } from "@/lib/pdf-storage";
+import { isBodyPartSlug } from "@/data/body-parts";
 
 const bodySchema = z.object({
   key: z.string().regex(PDF_KEY_PATTERN),
@@ -14,6 +15,8 @@ const bodySchema = z.object({
   filename: z.string().min(1).max(200),
   title: z.string().trim().min(1).max(200),
   description: z.string().trim().max(2000).optional(),
+  bodyPart: z.string().optional(),
+  disease: z.string().trim().max(100).optional(),
   sortOrder: z.number().int().optional(),
 });
 
@@ -29,7 +32,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "入力内容が正しくありません" }, { status: 400 });
   }
-  const { key, parts, size, filename, title, description, sortOrder } = parsed.data;
+  const { key, parts, size, filename, title, description, bodyPart, disease, sortOrder } = parsed.data;
 
   const ok = await finalizePdf(key, { parts, size, filename });
   if (!ok) {
@@ -40,6 +43,8 @@ export async function POST(req: NextRequest) {
     title,
     description: description || null,
     url: `/api/pdfs/${key}`,
+    bodyPart: bodyPart && isBodyPartSlug(bodyPart) ? bodyPart : null,
+    disease: disease || null,
     sortOrder: sortOrder ?? 0,
   });
 
