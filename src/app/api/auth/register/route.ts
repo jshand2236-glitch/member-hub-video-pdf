@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { queueWelcomeEmail } from "@/lib/welcome-email";
 
 const registerSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -41,6 +42,7 @@ export async function POST(req: Request) {
       passwordHash,
     })
     .returning({ id: users.id, email: users.email });
+  queueWelcomeEmail({ email: created.email, name: parsed.data.name ?? null });
 
   return NextResponse.json({ id: created.id, email: created.email }, { status: 201 });
 }

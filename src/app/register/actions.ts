@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 import { signIn } from "@/auth";
 import { AuthError } from "next-auth";
 import { isFreeAccessMode } from "@/lib/access";
+import { queueWelcomeEmail } from "@/lib/welcome-email";
 
 export type RegisterState = {
   error?: string;
@@ -41,6 +42,7 @@ export async function registerAction(
     email,
     passwordHash,
   });
+  queueWelcomeEmail({ email, name: name || null });
 
   // While pricing isn't finalized (FREE_ACCESS_MODE=true), skip the pricing
   // page and take new members straight to their dashboard/content instead.
