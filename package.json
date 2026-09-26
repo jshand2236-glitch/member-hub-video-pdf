@@ -10,7 +10,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:seed": "node --env-file=.env --import tsx scripts/seed.ts",
-    "netlify-build": "drizzle-kit push --force && next build"
+    "netlify-build": "rm -rf .next/cache/turbopack && drizzle-kit push --force && next build"
   },
   "dependencies": {
     "@netlify/blobs": "^11.1.1",
