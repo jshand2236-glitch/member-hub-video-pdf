@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { isFreeAccessMode } from "@/lib/access";
 import { hasActiveSubscription } from "@/lib/subscription";
+import { isApprovedMember } from "@/lib/member-status";
 import { getPdfManifest, PDF_KEY_PATTERN, streamPdf } from "@/lib/pdf-storage";
 
 // Member-only PDF download/viewer endpoint. Same access rule as /pdfs.
@@ -11,6 +12,9 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/pdfs/[key]">
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.redirect(new URL("/login?callbackUrl=/pdfs", req.nextUrl.origin));
+  }
+  if (!(await isApprovedMember(session.user))) {
+    return new NextResponse("運営による会員承認が必要です", { status: 403 });
   }
   if (!isFreeAccessMode() && !(await hasActiveSubscription(session.user.id))) {
     return new NextResponse("会員登録（有料プラン）が必要です", { status: 403 });

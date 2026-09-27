@@ -7,6 +7,8 @@ import { users } from "@/db/schema";
 import { createResetToken, RESET_TOKEN_TTL_MS } from "@/lib/password-reset";
 import { isMailConfigured, sendMail } from "@/lib/mailer";
 import { getAppUrl } from "@/lib/url";
+import { headers } from "next/headers";
+import { LIMITS, clientIp, consume } from "@/lib/rate-limit";
 
 export type ForgotState = {
   sent?: boolean;
@@ -28,6 +30,14 @@ export async function requestPasswordReset(
     return {
       error: "現在メールを送信できません。お手数ですが運営までお問い合わせください。",
     };
+  }
+
+  const ip = clientIp(await headers());
+  if (
+    !(await consume(`reset:ip:${ip}`, LIMITS.resetPerIp)) ||
+    !(await consume(`reset:email:${email}`, LIMITS.resetPerEmail))
+  ) {
+    return { error: "リクエストが多すぎます。1時間ほど時間をおいてからお試しください。" };
   }
 
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);

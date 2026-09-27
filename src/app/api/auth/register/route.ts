@@ -4,7 +4,8 @@ import { z } from "zod";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { queueWelcomeEmail } from "@/lib/welcome-email";
+import { queueAdminSignupNotice, queueWelcomeEmail } from "@/lib/welcome-email";
+import { LIMITS, clientIp, consume } from "@/lib/rate-limit";
 
 const registerSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -24,6 +25,13 @@ export async function POST(req: Request) {
 
   const email = parsed.data.email.toLowerCase().trim();
 
+  if (!(await consume(`register:ip:${clientIp(req.headers)}`, LIMITS.registerPerIp))) {
+    return NextResponse.json(
+      { error: "短時間に多くの登録が行われました。しばらく時間をおいてからお試しください。" },
+      { status: 429 },
+    );
+  }
+
   const existing = await db.select().from(users).where(eq(users.email, email)).limit(1);
   if (existing.length > 0) {
     return NextResponse.json(
@@ -40,8 +48,10 @@ export async function POST(req: Request) {
       name: parsed.data.name,
       email,
       passwordHash,
+      status: "pending",
     })
     .returning({ id: users.id, email: users.email });
+  queueAdminSignupNotice({ email, name: parsed.data.name ?? null });
   queueWelcomeEmail({ email: created.email, name: parsed.data.name ?? null });
 
   return NextResponse.json({ id: created.id, email: created.email }, { status: 201 });

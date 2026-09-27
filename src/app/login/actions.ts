@@ -25,6 +25,9 @@ export async function loginAction(
     if (error instanceof AuthError) {
       switch (error.type) {
         case "CredentialsSignin":
+          if ((error as { code?: string }).code === "too_many_attempts") {
+            return { error: "ログインの試行回数が多すぎます。15分ほど時間をおいてからお試しください。" };
+          }
           return { error: "メールアドレスまたはパスワードが正しくありません" };
         default:
           return { error: "ログインに失敗しました。もう一度お試しください。" };

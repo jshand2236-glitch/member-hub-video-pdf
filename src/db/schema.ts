@@ -8,6 +8,12 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   stripeCustomerId: text("stripe_customer_id"),
+  // Membership approval: "pending" (new sign-up, waiting for the admin),
+  // "approved", "rejected" or "suspended". Only "approved" members can view
+  // videos/PDFs. Defaults to "approved" so members who registered before
+  // approval was introduced keep their access; sign-ups set "pending".
+  status: text("status").notNull().default("approved"),
+  approvedAt: timestamp("approved_at", { mode: "date" }),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });
 
@@ -62,5 +68,17 @@ export const pdfDocuments = pgTable("pdf_documents", {
   // Condition this document is about, e.g. "腰椎椎間板ヘルニア" (free text)
   disease: text("disease"),
   sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+});
+
+// One row per rate-limited action (failed login, sign-up, reset request...),
+// keyed by a bucket such as "login-fail:email:foo@example.com" or
+// "register:ip:1.2.3.4". Old rows are pruned automatically; see
+// src/lib/rate-limit.ts.
+export const rateLimitEvents = pgTable("rate_limit_events", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  bucket: text("bucket").notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });

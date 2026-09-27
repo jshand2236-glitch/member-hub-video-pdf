@@ -8,7 +8,9 @@ import { eq } from "drizzle-orm";
 import { signIn } from "@/auth";
 import { AuthError } from "next-auth";
 import { isFreeAccessMode } from "@/lib/access";
-import { queueWelcomeEmail } from "@/lib/welcome-email";
+import { queueAdminSignupNotice, queueWelcomeEmail } from "@/lib/welcome-email";
+import { headers } from "next/headers";
+import { LIMITS, clientIp, consume } from "@/lib/rate-limit";
 
 export type RegisterState = {
   error?: string;
@@ -31,6 +33,11 @@ export async function registerAction(
     return { error: "パスワードは8文字以上にしてください" };
   }
 
+  const ip = clientIp(await headers());
+  if (!(await consume(`register:ip:${ip}`, LIMITS.registerPerIp))) {
+    return { error: "短時間に多くの登録が行われました。しばらく時間をおいてからお試しください。" };
+  }
+
   const existing = await db.select().from(users).where(eq(users.email, email)).limit(1);
   if (existing.length > 0) {
     return { error: "このメールアドレスは既に登録されています" };
@@ -41,7 +48,9 @@ export async function registerAction(
     name: name || null,
     email,
     passwordHash,
+    status: "pending",
   });
+  queueAdminSignupNotice({ email, name: name || null });
   queueWelcomeEmail({ email, name: name || null });
 
   // While pricing isn't finalized (FREE_ACCESS_MODE=true), skip the pricing

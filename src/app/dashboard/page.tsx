@@ -4,6 +4,8 @@ import { auth } from "@/auth";
 import { getLatestSubscription, hasActiveSubscription } from "@/lib/subscription";
 import { isFreeAccessMode } from "@/lib/access";
 import ManageBillingButton from "./manage-billing-button";
+import { getMemberStatus, isApprovedMember } from "@/lib/member-status";
+import MemberStatusNotice from "@/components/member-status-notice";
 
 export const metadata = {
   title: "マイページ | FMC",
@@ -28,15 +30,17 @@ export default async function DashboardPage() {
 
   const freeAccess = isFreeAccessMode();
 
-  const [active, subscription] = await Promise.all([
+  const [active, subscription, approved, memberStatus] = await Promise.all([
     hasActiveSubscription(session.user.id),
     getLatestSubscription(session.user.id),
+    isApprovedMember(session.user),
+    getMemberStatus(session.user.id),
   ]);
 
   // In free access mode, any logged-in member can view videos/PDFs -
   // subscription status is informational only (or not shown at all yet,
   // since there's nothing to subscribe to).
-  const canViewContent = freeAccess || active;
+  const canViewContent = approved && (freeAccess || active);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
@@ -46,7 +50,13 @@ export default async function DashboardPage() {
         {session.user.email}
       </p>
 
-      {!freeAccess && (
+      {!approved && (
+        <div className="mt-8">
+          <MemberStatusNotice status={memberStatus} />
+        </div>
+      )}
+
+      {approved && !freeAccess && (
         <div className="mt-8 rounded-[4px] border border-line p-6">
           <h2 className="text-lg font-semibold">会員ステータス</h2>
           {subscription ? (

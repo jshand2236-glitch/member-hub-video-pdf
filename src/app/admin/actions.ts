@@ -4,10 +4,12 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { isAdminEmail } from "@/lib/admin";
 import { db } from "@/db";
-import { videos, pdfDocuments } from "@/db/schema";
+import { videos, pdfDocuments, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { deletePdf, storedPdfKeyFromUrl } from "@/lib/pdf-storage";
 import { isBodyPartSlug } from "@/data/body-parts";
+import { isMemberStatus } from "@/lib/member-status";
+import { queueApprovedEmail } from "@/lib/welcome-email";
 
 async function assertAdmin() {
   const session = await auth();
@@ -120,4 +122,28 @@ export async function deletePdfAction(formData: FormData) {
   if (key) await deletePdf(key);
   revalidatePath("/admin");
   revalidatePath("/pdfs");
+}
+
+export async function setMemberStatusAction(formData: FormData) {
+  await assertAdmin();
+  const id = String(formData.get("id") ?? "");
+  const status = String(formData.get("status") ?? "");
+  if (!id || !isMemberStatus(status)) return;
+
+  const [member] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  if (!member || member.status === status) return;
+
+  await db
+    .update(users)
+    .set({
+      status,
+      approvedAt: status === "approved" ? new Date() : member.approvedAt,
+    })
+    .where(eq(users.id, id));
+
+  // Let the member know the first time they are approved.
+  if (status === "approved" && !member.approvedAt) {
+    queueApprovedEmail({ email: member.email, name: member.name });
+  }
+  revalidatePath("/admin");
 }
