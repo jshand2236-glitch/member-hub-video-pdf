@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import Nav from "@/components/nav";
 import "./globals.css";
@@ -18,11 +19,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <footer className="border-t border-line bg-soft">
           <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <div>
-              <p className="font-serif text-base font-semibold tracking-[0.14em]">
-                FUKUOKA MEDICAL CONNECT
-                <span className="ml-2 font-sans text-[11px] font-normal tracking-[0.2em] text-muted">FMC</span>
-              </p>
-              <p className="mt-1 text-xs text-muted">
+              <Image
+                src="/fmc-logo.png"
+                alt="FUKUOKA MEDICAL CONNECT"
+                width={1163}
+                height={495}
+                className="h-auto w-[150px]"
+              />
+              <p className="mt-3 text-xs text-muted">
                 学び続ける医療者のための、会員制プラットフォーム
               </p>
             </div>

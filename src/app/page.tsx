@@ -37,8 +37,15 @@ export default async function Home() {
           aria-hidden="true"
         />
         <div className="relative mx-auto flex min-h-[74vh] max-w-5xl flex-col justify-center px-4 py-24 sm:px-6">
-          <span className="eyebrow eyebrow-light">Fukuoka Medical Connect</span>
-          <h1 className="mt-6 font-serif text-3xl font-semibold text-white sm:text-5xl sm:leading-[1.45]">
+          <Image
+            src="/fmc-logo-white.png"
+            alt="FUKUOKA MEDICAL CONNECT"
+            width={1163}
+            height={495}
+            priority
+            className="h-auto w-[200px] sm:w-[260px]"
+          />
+          <h1 className="mt-10 font-serif text-3xl font-semibold text-white sm:text-5xl sm:leading-[1.45]">
             医療者として、
             <br />
             学び続ける場所。

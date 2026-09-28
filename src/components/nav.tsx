@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { auth, signOut } from "@/auth";
 import { isAdminEmail } from "@/lib/admin";
@@ -9,12 +10,22 @@ export default async function Nav() {
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-background/95 backdrop-blur">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-y-3 px-4 py-4 sm:flex-nowrap sm:px-6">
-        <Link href="/" className="leading-tight">
-          <span className="block font-serif text-base font-semibold tracking-[0.12em] sm:text-lg sm:tracking-[0.14em]">
-            FUKUOKA MEDICAL CONNECT
-          </span>
-          <span className="block font-sans text-[10px] tracking-[0.28em] text-muted">
-            FMC MEMBERS
+        <Link href="/" className="flex items-center gap-3 leading-tight" aria-label="FUKUOKA MEDICAL CONNECT トップへ">
+          <Image
+            src="/fmc-mark.png"
+            alt=""
+            width={1155}
+            height={406}
+            priority
+            className="h-8 w-auto sm:h-9"
+          />
+          <span className="border-l border-line pl-3">
+            <span className="block font-serif text-[13px] font-semibold tracking-[0.1em] sm:text-sm sm:tracking-[0.12em]">
+              FUKUOKA MEDICAL CONNECT
+            </span>
+            <span className="block font-sans text-[10px] tracking-[0.28em] text-muted">
+              MEMBERS
+            </span>
           </span>
         </Link>
         <nav className="flex w-full flex-wrap items-center gap-x-4 gap-y-2 text-sm whitespace-nowrap sm:w-auto sm:flex-nowrap sm:gap-5">
