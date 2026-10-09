@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { isAdminEmail } from "@/lib/admin";
 import { db } from "@/db";
@@ -109,6 +110,33 @@ export async function updatePdfMetaAction(formData: FormData) {
     .where(eq(pdfDocuments.id, id));
   revalidatePath("/admin");
   revalidatePath("/pdfs");
+}
+
+export async function updatePdfAction(formData: FormData) {
+  await assertAdmin();
+  const id = String(formData.get("id") ?? "");
+  const title = String(formData.get("title") ?? "").trim().slice(0, 200);
+  const description = String(formData.get("description") ?? "").trim().slice(0, 2000);
+  const bodyPartRaw = String(formData.get("bodyPart") ?? "");
+  const disease = String(formData.get("disease") ?? "").trim().slice(0, 100);
+  const sortOrder = Number.parseInt(String(formData.get("sortOrder") ?? "0"), 10) || 0;
+  if (!id || !title) {
+    throw new Error("タイトルは必須です");
+  }
+  await db
+    .update(pdfDocuments)
+    .set({
+      title,
+      description: description || null,
+      bodyPart: isBodyPartSlug(bodyPartRaw) ? bodyPartRaw : null,
+      disease: disease || null,
+      sortOrder,
+    })
+    .where(eq(pdfDocuments.id, id));
+  revalidatePath("/admin");
+  revalidatePath("/pdfs");
+  revalidatePath(`/pdfs/${id}`);
+  redirect(`/admin/pdfs/${id}?saved=1`);
 }
 
 export async function deletePdfAction(formData: FormData) {

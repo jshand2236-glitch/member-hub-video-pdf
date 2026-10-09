@@ -3,10 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BODY_PARTS } from "@/data/body-parts";
-
-// Must match PDF_CHUNK_SIZE / PDF_MAX_PARTS in src/lib/pdf-storage.ts
-const CHUNK_SIZE = 3 * 1024 * 1024;
-const MAX_PARTS = 30;
+import { checkPdfFile, uploadPdfInChunks } from "@/lib/pdf-upload-client";
 
 const labelClass = "block text-sm font-medium";
 const inputClass =
@@ -24,41 +21,22 @@ export default function PdfUploadForm({ diseases }: { diseases: string[] }) {
     const form = e.currentTarget;
     const data = new FormData(form);
     const file = data.get("file");
-    if (!(file instanceof File) || file.size === 0) {
-      setStatus({ kind: "error", message: "PDFファイルを選択してください" });
-      return;
-    }
-    if (file.type && file.type !== "application/pdf") {
-      setStatus({ kind: "error", message: "PDFファイルのみアップロードできます" });
-      return;
-    }
-    const parts = Math.ceil(file.size / CHUNK_SIZE);
-    if (parts > MAX_PARTS) {
-      setStatus({ kind: "error", message: `ファイルが大きすぎます（上限 約${(CHUNK_SIZE * MAX_PARTS) / 1024 / 1024}MB）` });
+    const problem = checkPdfFile(file);
+    if (problem) {
+      setStatus({ kind: "error", message: problem });
       return;
     }
 
-    const key = crypto.randomUUID();
     try {
-      for (let i = 0; i < parts; i++) {
-        setStatus({ kind: "busy", message: `アップロード中… ${Math.round((i / parts) * 100)}%` });
-        const res = await fetch(`/api/admin/pdf-upload?key=${key}&part=${i}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/octet-stream" },
-          body: file.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE),
-        });
-        if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? "アップロードに失敗しました");
-      }
-
+      const uploaded = await uploadPdfInChunks(file as File, (pct) =>
+        setStatus({ kind: "busy", message: `アップロード中… ${pct}%` }),
+      );
       setStatus({ kind: "busy", message: "仕上げ中…" });
       const res = await fetch("/api/admin/pdf-upload/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          key,
-          parts,
-          size: file.size,
-          filename: file.name,
+          ...uploaded,
           title: String(data.get("title") ?? ""),
           description: String(data.get("description") ?? ""),
           bodyPart: String(data.get("bodyPart") ?? ""),

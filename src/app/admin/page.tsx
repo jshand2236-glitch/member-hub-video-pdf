@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { isAdminEmail } from "@/lib/admin";
@@ -241,7 +242,7 @@ export default async function AdminPage() {
       </section>
 
       {/* PDFs */}
-      <section className="mt-16">
+      <section id="pdfs" className="mt-16 scroll-mt-24">
         <h2 className="text-lg font-semibold">PDF資料を追加</h2>
         <PdfUploadForm
           diseases={[...new Set(allPdfs.map((d) => d.disease).filter((d): d is string => !!d))].sort()}
@@ -285,6 +286,12 @@ export default async function AdminPage() {
                   変更
                 </button>
               </form>
+              <Link
+                href={`/admin/pdfs/${doc.id}`}
+                className="rounded-[4px] border border-accent px-3 py-1 text-xs text-accent hover:bg-accent hover:text-white"
+              >
+                編集・差し替え
+              </Link>
               <form action={deletePdfAction}>
                 <input type="hidden" name="id" value={doc.id} />
                 <button
