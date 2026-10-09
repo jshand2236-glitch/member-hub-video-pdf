@@ -10,6 +10,7 @@ import { eq } from "drizzle-orm";
 import { deletePdf, storedPdfKeyFromUrl } from "@/lib/pdf-storage";
 import { isBodyPartSlug } from "@/data/body-parts";
 import { isMemberStatus } from "@/lib/member-status";
+import { parseVideoInput } from "@/lib/video-id";
 import { queueApprovedEmail } from "@/lib/welcome-email";
 
 async function assertAdmin() {
@@ -19,35 +20,53 @@ async function assertAdmin() {
   }
 }
 
-export async function addVideoAction(formData: FormData) {
-  await assertAdmin();
-
-  const title = String(formData.get("title") ?? "").trim();
-  const description = String(formData.get("description") ?? "").trim();
-  const instructorName = String(formData.get("instructorName") ?? "").trim();
+/** Reads the video form fields shared by the add and edit forms. */
+function readVideoForm(formData: FormData) {
+  const title = String(formData.get("title") ?? "").trim().slice(0, 200);
+  const description = String(formData.get("description") ?? "").trim().slice(0, 2000);
+  const instructorName = String(formData.get("instructorName") ?? "").trim().slice(0, 100);
   const bodyPartRaw = String(formData.get("bodyPart") ?? "");
-  const provider = String(formData.get("provider") ?? "youtube");
-  const providerVideoId = String(formData.get("providerVideoId") ?? "").trim();
-  const embedHash = String(formData.get("embedHash") ?? "").trim();
-  const sortOrderRaw = String(formData.get("sortOrder") ?? "0");
+  const providerRaw = String(formData.get("provider") ?? "youtube");
+  const videoInput = String(formData.get("providerVideoId") ?? "");
+  const embedHashRaw = String(formData.get("embedHash") ?? "").trim();
+  const sortOrder = Number.parseInt(String(formData.get("sortOrder") ?? "0"), 10) || 0;
 
-  if (!title || !providerVideoId) {
-    throw new Error("タイトルと動画IDは必須です");
-  }
+  // Accept a full YouTube/Vimeo URL as well as a bare video ID.
+  const parsed = parseVideoInput(videoInput, providerRaw);
+  if (!title || !parsed) return null;
 
-  await db.insert(videos).values({
+  return {
     title,
     description: description || null,
     instructorName: instructorName || null,
     bodyPart: isBodyPartSlug(bodyPartRaw) ? bodyPartRaw : null,
-    provider,
-    providerVideoId,
-    embedHash: embedHash || null,
-    sortOrder: Number.parseInt(sortOrderRaw, 10) || 0,
-  });
+    provider: parsed.provider,
+    providerVideoId: parsed.id,
+    embedHash: parsed.provider === "vimeo" ? embedHashRaw || parsed.hash || null : null,
+    sortOrder,
+  };
+}
 
+export async function addVideoAction(formData: FormData) {
+  await assertAdmin();
+  const values = readVideoForm(formData);
+  if (!values) redirect("/admin?videoError=1#videos");
+  await db.insert(videos).values(values);
   revalidatePath("/admin");
   revalidatePath("/videos");
+}
+
+export async function updateVideoAction(formData: FormData) {
+  await assertAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  const values = readVideoForm(formData);
+  if (!values) redirect(`/admin/videos/${id}?error=1`);
+  await db.update(videos).set(values).where(eq(videos.id, id));
+  revalidatePath("/admin");
+  revalidatePath("/videos");
+  revalidatePath(`/videos/${id}`);
+  redirect(`/admin/videos/${id}?saved=1`);
 }
 
 export async function updateVideoBodyPartAction(formData: FormData) {

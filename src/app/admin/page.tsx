@@ -22,7 +22,8 @@ export const metadata = {
   title: "管理画面 | FMC",
 };
 
-export default async function AdminPage() {
+export default async function AdminPage(props: PageProps<"/admin">) {
+  const videoError = (await props.searchParams)?.videoError === "1";
   const session = await auth();
   if (!session?.user) {
     redirect("/login?callbackUrl=/admin");
@@ -123,8 +124,13 @@ export default async function AdminPage() {
       </section>
 
       {/* Videos */}
-      <section className="mt-12">
+      <section id="videos" className="mt-12 scroll-mt-24">
         <h2 className="text-lg font-semibold">動画を追加</h2>
+        {videoError && (
+          <p role="alert" className="mt-3 rounded-[4px] border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+            動画のURLまたは動画IDが読み取れませんでした。YouTubeのURL（例: https://youtu.be/YbklWBiOEbM）をそのまま貼り付けてください。
+          </p>
+        )}
         <form action={addVideoAction} className="mt-4 grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className={labelClass}>タイトル</label>
@@ -173,11 +179,11 @@ export default async function AdminPage() {
             <input name="sortOrder" type="number" defaultValue={0} className={inputClass} />
           </div>
           <div>
-            <label className={labelClass}>動画ID</label>
+            <label className={labelClass}>動画のURL または 動画ID</label>
             <input
               name="providerVideoId"
               required
-              placeholder="例: dQw4w9WgXcQ"
+              placeholder="例: https://youtu.be/YbklWBiOEbM"
               className={inputClass}
             />
           </div>
@@ -227,6 +233,12 @@ export default async function AdminPage() {
                   部位を変更
                 </button>
               </form>
+              <Link
+                href={`/admin/videos/${video.id}`}
+                className="rounded-[4px] border border-accent px-3 py-1 text-xs text-accent hover:bg-accent hover:text-white"
+              >
+                編集
+              </Link>
               <form action={deleteVideoAction}>
                 <input type="hidden" name="id" value={video.id} />
                 <button
