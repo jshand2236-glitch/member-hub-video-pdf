@@ -41,7 +41,6 @@ export default function PdfUploadForm({ diseases }: { diseases: string[] }) {
           description: String(data.get("description") ?? ""),
           bodyPart: String(data.get("bodyPart") ?? ""),
           disease: String(data.get("disease") ?? ""),
-          sortOrder: Number.parseInt(String(data.get("sortOrder") ?? "0"), 10) || 0,
         }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? "登録に失敗しました");
@@ -101,10 +100,6 @@ export default function PdfUploadForm({ diseases }: { diseases: string[] }) {
         <p className="mt-1 text-xs text-muted">
           会員だけが閲覧できる場所に保存されます（ログインしていない人はURLを知っていても開けません）。
         </p>
-      </div>
-      <div>
-        <label className={labelClass}>並び順（小さい順）</label>
-        <input name="sortOrder" type="number" defaultValue={0} className={inputClass} />
       </div>
       <div className="sm:col-span-2 flex flex-wrap items-center gap-4">
         <button

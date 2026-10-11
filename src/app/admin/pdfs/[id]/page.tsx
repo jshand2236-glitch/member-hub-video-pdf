@@ -116,12 +116,6 @@ export default async function EditPdfPage(props: PageProps<"/admin/pdfs/[id]">) 
               ))}
             </datalist>
           </div>
-          <div>
-            <label className={labelClass} htmlFor="sortOrder">
-              並び順（小さい順）
-            </label>
-            <input id="sortOrder" name="sortOrder" type="number" defaultValue={doc.sortOrder} className={inputClass} />
-          </div>
           <div className="sm:col-span-2 flex flex-wrap items-center gap-4">
             <button
               type="submit"

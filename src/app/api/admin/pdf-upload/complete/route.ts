@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { pdfDocuments } from "@/db/schema";
 import { finalizePdf, PDF_KEY_PATTERN, PDF_MAX_PARTS } from "@/lib/pdf-storage";
 import { isBodyPartSlug } from "@/data/body-parts";
+import { nextPdfSortOrder } from "@/lib/ordering";
 
 const bodySchema = z.object({
   key: z.string().regex(PDF_KEY_PATTERN),
@@ -17,7 +18,6 @@ const bodySchema = z.object({
   description: z.string().trim().max(2000).optional(),
   bodyPart: z.string().optional(),
   disease: z.string().trim().max(100).optional(),
-  sortOrder: z.number().int().optional(),
 });
 
 // Called once every chunk has been uploaded: makes the file servable and
@@ -32,20 +32,22 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "入力内容が正しくありません" }, { status: 400 });
   }
-  const { key, parts, size, filename, title, description, bodyPart, disease, sortOrder } = parsed.data;
+  const { key, parts, size, filename, title, description, bodyPart, disease } = parsed.data;
 
   const ok = await finalizePdf(key, { parts, size, filename });
   if (!ok) {
     return NextResponse.json({ error: "アップロードが完了していません。もう一度お試しください。" }, { status: 400 });
   }
 
+  const part = bodyPart && isBodyPartSlug(bodyPart) ? bodyPart : null;
   await db.insert(pdfDocuments).values({
     title,
     description: description || null,
     url: `/api/pdfs/${key}`,
-    bodyPart: bodyPart && isBodyPartSlug(bodyPart) ? bodyPart : null,
+    bodyPart: part,
     disease: disease || null,
-    sortOrder: sortOrder ?? 0,
+    // New PDFs go to the end of their part/condition group.
+    sortOrder: await nextPdfSortOrder(part, disease || null),
   });
 
   revalidatePath("/admin");

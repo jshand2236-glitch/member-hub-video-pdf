@@ -73,7 +73,7 @@ export default async function VideosPage(props: PageProps<"/videos">) {
   const searchParams = await props.searchParams;
   const partParam = Array.isArray(searchParams?.part) ? searchParams.part[0] : searchParams?.part;
 
-  const allVideos = await db.select().from(videos).orderBy(asc(videos.sortOrder));
+  const allVideos = await db.select().from(videos).orderBy(asc(videos.sortOrder), asc(videos.createdAt));
 
   // Group by body part, in head-to-foot order; videos without a part go last.
   const groups: Group[] = [

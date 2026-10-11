@@ -11,6 +11,7 @@ import { deletePdf, storedPdfKeyFromUrl } from "@/lib/pdf-storage";
 import { isBodyPartSlug } from "@/data/body-parts";
 import { isMemberStatus } from "@/lib/member-status";
 import { parseVideoInput } from "@/lib/video-id";
+import { movePdf, moveVideo, nextPdfSortOrder, nextVideoSortOrder, type Direction } from "@/lib/ordering";
 import { queueApprovedEmail } from "@/lib/welcome-email";
 
 async function assertAdmin() {
@@ -29,8 +30,6 @@ function readVideoForm(formData: FormData) {
   const providerRaw = String(formData.get("provider") ?? "youtube");
   const videoInput = String(formData.get("providerVideoId") ?? "");
   const embedHashRaw = String(formData.get("embedHash") ?? "").trim();
-  const sortOrder = Number.parseInt(String(formData.get("sortOrder") ?? "0"), 10) || 0;
-
   // Accept a full YouTube/Vimeo URL as well as a bare video ID.
   const parsed = parseVideoInput(videoInput, providerRaw);
   if (!title || !parsed) return null;
@@ -43,7 +42,6 @@ function readVideoForm(formData: FormData) {
     provider: parsed.provider,
     providerVideoId: parsed.id,
     embedHash: parsed.provider === "vimeo" ? embedHashRaw || parsed.hash || null : null,
-    sortOrder,
   };
 }
 
@@ -51,7 +49,8 @@ export async function addVideoAction(formData: FormData) {
   await assertAdmin();
   const values = readVideoForm(formData);
   if (!values) redirect("/admin?videoError=1#videos");
-  await db.insert(videos).values(values);
+  // New videos go to the end of their body-part group.
+  await db.insert(videos).values({ ...values, sortOrder: await nextVideoSortOrder(values.bodyPart) });
   revalidatePath("/admin");
   revalidatePath("/videos");
 }
@@ -62,24 +61,16 @@ export async function updateVideoAction(formData: FormData) {
   if (!id) return;
   const values = readVideoForm(formData);
   if (!values) redirect(`/admin/videos/${id}?error=1`);
-  await db.update(videos).set(values).where(eq(videos.id, id));
+  const [current] = await db.select().from(videos).where(eq(videos.id, id)).limit(1);
+  if (!current) return;
+  // Moved to another body part: put it at the end of that group.
+  const sortOrder =
+    current.bodyPart === values.bodyPart ? current.sortOrder : await nextVideoSortOrder(values.bodyPart);
+  await db.update(videos).set({ ...values, sortOrder }).where(eq(videos.id, id));
   revalidatePath("/admin");
   revalidatePath("/videos");
   revalidatePath(`/videos/${id}`);
   redirect(`/admin/videos/${id}?saved=1`);
-}
-
-export async function updateVideoBodyPartAction(formData: FormData) {
-  await assertAdmin();
-  const id = String(formData.get("id") ?? "");
-  const bodyPartRaw = String(formData.get("bodyPart") ?? "");
-  if (!id) return;
-  await db
-    .update(videos)
-    .set({ bodyPart: isBodyPartSlug(bodyPartRaw) ? bodyPartRaw : null })
-    .where(eq(videos.id, id));
-  revalidatePath("/admin");
-  revalidatePath("/videos");
 }
 
 export async function deleteVideoAction(formData: FormData) {
@@ -91,46 +82,6 @@ export async function deleteVideoAction(formData: FormData) {
   revalidatePath("/videos");
 }
 
-export async function addPdfAction(formData: FormData) {
-  await assertAdmin();
-
-  const title = String(formData.get("title") ?? "").trim();
-  const description = String(formData.get("description") ?? "").trim();
-  const url = String(formData.get("url") ?? "").trim();
-  const sortOrderRaw = String(formData.get("sortOrder") ?? "0");
-
-  if (!title || !url) {
-    throw new Error("タイトルとURLは必須です");
-  }
-
-  await db.insert(pdfDocuments).values({
-    title,
-    description: description || null,
-    url,
-    sortOrder: Number.parseInt(sortOrderRaw, 10) || 0,
-  });
-
-  revalidatePath("/admin");
-  revalidatePath("/pdfs");
-}
-
-export async function updatePdfMetaAction(formData: FormData) {
-  await assertAdmin();
-  const id = String(formData.get("id") ?? "");
-  const bodyPartRaw = String(formData.get("bodyPart") ?? "");
-  const disease = String(formData.get("disease") ?? "").trim();
-  if (!id) return;
-  await db
-    .update(pdfDocuments)
-    .set({
-      bodyPart: isBodyPartSlug(bodyPartRaw) ? bodyPartRaw : null,
-      disease: disease || null,
-    })
-    .where(eq(pdfDocuments.id, id));
-  revalidatePath("/admin");
-  revalidatePath("/pdfs");
-}
-
 export async function updatePdfAction(formData: FormData) {
   await assertAdmin();
   const id = String(formData.get("id") ?? "");
@@ -138,19 +89,18 @@ export async function updatePdfAction(formData: FormData) {
   const description = String(formData.get("description") ?? "").trim().slice(0, 2000);
   const bodyPartRaw = String(formData.get("bodyPart") ?? "");
   const disease = String(formData.get("disease") ?? "").trim().slice(0, 100);
-  const sortOrder = Number.parseInt(String(formData.get("sortOrder") ?? "0"), 10) || 0;
   if (!id || !title) {
     throw new Error("タイトルは必須です");
   }
+  const bodyPart = isBodyPartSlug(bodyPartRaw) ? bodyPartRaw : null;
+  const [current] = await db.select().from(pdfDocuments).where(eq(pdfDocuments.id, id)).limit(1);
+  if (!current) return;
+  // Moved to another part/condition: put it at the end of that group.
+  const sameGroup = current.bodyPart === bodyPart && (current.disease ?? null) === (disease || null);
+  const sortOrder = sameGroup ? current.sortOrder : await nextPdfSortOrder(bodyPart, disease || null);
   await db
     .update(pdfDocuments)
-    .set({
-      title,
-      description: description || null,
-      bodyPart: isBodyPartSlug(bodyPartRaw) ? bodyPartRaw : null,
-      disease: disease || null,
-      sortOrder,
-    })
+    .set({ title, description: description || null, bodyPart, disease: disease || null, sortOrder })
     .where(eq(pdfDocuments.id, id));
   revalidatePath("/admin");
   revalidatePath("/pdfs");
@@ -193,4 +143,29 @@ export async function setMemberStatusAction(formData: FormData) {
     queueApprovedEmail({ email: member.email, name: member.name });
   }
   revalidatePath("/admin");
+}
+
+function readDirection(formData: FormData): Direction | null {
+  const dir = String(formData.get("dir") ?? "");
+  return dir === "up" || dir === "down" ? dir : null;
+}
+
+export async function moveVideoAction(formData: FormData) {
+  await assertAdmin();
+  const id = String(formData.get("id") ?? "");
+  const dir = readDirection(formData);
+  if (!id || !dir) return;
+  await moveVideo(id, dir);
+  revalidatePath("/admin");
+  revalidatePath("/videos");
+}
+
+export async function movePdfAction(formData: FormData) {
+  await assertAdmin();
+  const id = String(formData.get("id") ?? "");
+  const dir = readDirection(formData);
+  if (!id || !dir) return;
+  await movePdf(id, dir);
+  revalidatePath("/admin");
+  revalidatePath("/pdfs");
 }

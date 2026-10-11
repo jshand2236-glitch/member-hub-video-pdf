@@ -69,7 +69,7 @@ export default async function PdfsPage(props: PageProps<"/pdfs">) {
   const partParam = pick(sp?.part);
   const diseaseParam = pick(sp?.disease);
 
-  const allDocs = await db.select().from(pdfDocuments).orderBy(asc(pdfDocuments.sortOrder));
+  const allDocs = await db.select().from(pdfDocuments).orderBy(asc(pdfDocuments.sortOrder), asc(pdfDocuments.createdAt));
 
   const parts = [
     ...BODY_PARTS.map((p) => ({ ...p, docs: allDocs.filter((d) => d.bodyPart === p.slug) })),

@@ -123,12 +123,6 @@ export default async function EditVideoPage(props: PageProps<"/admin/videos/[id]
             <option value="vimeo">Vimeo</option>
           </select>
         </div>
-        <div>
-          <label className={labelClass} htmlFor="sortOrder">
-            並び順（小さい順）
-          </label>
-          <input id="sortOrder" name="sortOrder" type="number" defaultValue={video.sortOrder} className={inputClass} />
-        </div>
         <div className="sm:col-span-2">
           <label className={labelClass} htmlFor="providerVideoId">
             動画のURL または 動画ID

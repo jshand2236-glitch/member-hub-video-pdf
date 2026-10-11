@@ -15,7 +15,7 @@ export default async function PdfDetailPage(props: PageProps<"/pdfs/[id]">) {
 
   const part = findBodyPart(doc.bodyPart);
   const relatedVideos = part
-    ? await db.select().from(videos).where(eq(videos.bodyPart, part.slug)).orderBy(asc(videos.sortOrder)).limit(3)
+    ? await db.select().from(videos).where(eq(videos.bodyPart, part.slug)).orderBy(asc(videos.sortOrder), asc(videos.createdAt)).limit(3)
     : [];
 
   return (

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { isAdminEmail } from "@/lib/admin";
@@ -7,16 +6,10 @@ import { videos, pdfDocuments, users } from "@/db/schema";
 import { asc, desc } from "drizzle-orm";
 import { MEMBER_STATUS_LABEL, isMemberStatus, type MemberStatus } from "@/lib/member-status";
 import PdfUploadForm from "./pdf-upload-form";
-import { BODY_PARTS, findBodyPart } from "@/data/body-parts";
+import { BODY_PARTS } from "@/data/body-parts";
 import { INSTRUCTORS } from "@/data/instructors";
-import {
-  addVideoAction,
-  updateVideoBodyPartAction,
-  deletePdfAction,
-  updatePdfMetaAction,
-  deleteVideoAction,
-  setMemberStatusAction,
-} from "./actions";
+import { addVideoAction, setMemberStatusAction } from "./actions";
+import { PdfAdminList, VideoAdminList } from "./content-lists";
 
 export const metadata = {
   title: "管理画面 | FMC",
@@ -33,8 +26,8 @@ export default async function AdminPage(props: PageProps<"/admin">) {
   }
 
   const [allVideos, allPdfs, allMembers] = await Promise.all([
-    db.select().from(videos).orderBy(asc(videos.sortOrder)),
-    db.select().from(pdfDocuments).orderBy(asc(pdfDocuments.sortOrder)),
+    db.select().from(videos).orderBy(asc(videos.sortOrder), asc(videos.createdAt)),
+    db.select().from(pdfDocuments).orderBy(asc(pdfDocuments.sortOrder), asc(pdfDocuments.createdAt)),
     db
       .select({
         id: users.id,
@@ -175,10 +168,6 @@ export default async function AdminPage(props: PageProps<"/admin">) {
             </select>
           </div>
           <div>
-            <label className={labelClass}>並び順（小さい順）</label>
-            <input name="sortOrder" type="number" defaultValue={0} className={inputClass} />
-          </div>
-          <div>
             <label className={labelClass}>動画のURL または 動画ID</label>
             <input
               name="providerVideoId"
@@ -203,54 +192,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
           </div>
         </form>
 
-        <ul className="mt-8 divide-y divide-line">
-          {allVideos.map((video) => (
-            <li key={video.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-              <div className="min-w-0 flex-1">
-                <p className="font-medium">{video.title}</p>
-                <p className="text-xs text-muted">
-                  {findBodyPart(video.bodyPart)?.label ?? "未分類"}
-                  {video.instructorName ? ` / ${video.instructorName}` : ""}
-                  {` / ${video.provider} / ${video.providerVideoId}`}
-                </p>
-              </div>
-              <form action={updateVideoBodyPartAction} className="flex items-center gap-2">
-                <input type="hidden" name="id" value={video.id} />
-                <select
-                  name="bodyPart"
-                  defaultValue={video.bodyPart ?? ""}
-                  aria-label="部位"
-                  className="rounded-[4px] border border-line bg-transparent px-2 py-1 text-xs outline-none focus:border-accent"
-                >
-                  <option value="">未分類</option>
-                  {BODY_PARTS.map((p) => (
-                    <option key={p.slug} value={p.slug}>
-                      {p.label}
-                    </option>
-                  ))}
-                </select>
-                <button type="submit" className="text-xs text-accent hover:underline">
-                  部位を変更
-                </button>
-              </form>
-              <Link
-                href={`/admin/videos/${video.id}`}
-                className="rounded-[4px] border border-accent px-3 py-1 text-xs text-accent hover:bg-accent hover:text-white"
-              >
-                編集
-              </Link>
-              <form action={deleteVideoAction}>
-                <input type="hidden" name="id" value={video.id} />
-                <button
-                  type="submit"
-                  className="text-sm text-red-600 hover:underline"
-                >
-                  削除
-                </button>
-              </form>
-            </li>
-          ))}
-        </ul>
+        <VideoAdminList videos={allVideos} />
       </section>
 
       {/* PDFs */}
@@ -260,62 +202,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
           diseases={[...new Set(allPdfs.map((d) => d.disease).filter((d): d is string => !!d))].sort()}
         />
 
-        <ul className="mt-8 divide-y divide-line">
-          {allPdfs.map((doc) => (
-            <li key={doc.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-              <div className="min-w-0 flex-1">
-                <p className="font-medium">{doc.title}</p>
-                <p className="text-xs text-muted">
-                  {findBodyPart(doc.bodyPart)?.label ?? "未分類"}
-                  {doc.disease ? ` / ${doc.disease}` : ""}
-                  {doc.url.startsWith("/api/pdfs/") ? "" : ` / ${doc.url}`}
-                </p>
-              </div>
-              <form action={updatePdfMetaAction} className="flex flex-wrap items-center gap-2">
-                <input type="hidden" name="id" value={doc.id} />
-                <select
-                  name="bodyPart"
-                  defaultValue={doc.bodyPart ?? ""}
-                  aria-label="部位"
-                  className="rounded-[4px] border border-line bg-transparent px-2 py-1 text-xs outline-none focus:border-accent"
-                >
-                  <option value="">未分類</option>
-                  {BODY_PARTS.map((p) => (
-                    <option key={p.slug} value={p.slug}>
-                      {p.label}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  name="disease"
-                  defaultValue={doc.disease ?? ""}
-                  list="pdf-diseases"
-                  placeholder="疾患名"
-                  aria-label="疾患名"
-                  className="w-40 rounded-[4px] border border-line bg-transparent px-2 py-1 text-xs outline-none focus:border-accent"
-                />
-                <button type="submit" className="text-xs text-accent hover:underline">
-                  変更
-                </button>
-              </form>
-              <Link
-                href={`/admin/pdfs/${doc.id}`}
-                className="rounded-[4px] border border-accent px-3 py-1 text-xs text-accent hover:bg-accent hover:text-white"
-              >
-                編集・差し替え
-              </Link>
-              <form action={deletePdfAction}>
-                <input type="hidden" name="id" value={doc.id} />
-                <button
-                  type="submit"
-                  className="text-sm text-red-600 hover:underline"
-                >
-                  削除
-                </button>
-              </form>
-            </li>
-          ))}
-        </ul>
+        <PdfAdminList docs={allPdfs} />
       </section>
     </div>
   );
