@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { auth, signOut } from "@/auth";
 import { isAdminEmail } from "@/lib/admin";
+import SubmitButton from "@/components/submit-button";
 
 export default async function Nav() {
   const session = await auth();
@@ -57,12 +58,12 @@ export default async function Nav() {
                   await signOut({ redirectTo: "/" });
                 }}
               >
-                <button
-                  type="submit"
+                <SubmitButton
+                  pendingLabel="ログアウト中…"
                   className="rounded-[4px] border border-line px-3 py-1.5 text-xs tracking-wider hover:border-accent hover:text-accent"
                 >
                   ログアウト
-                </button>
+                </SubmitButton>
               </form>
             </>
           ) : (

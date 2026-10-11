@@ -9,6 +9,7 @@ import { BODY_PARTS } from "@/data/body-parts";
 import { getPdfManifest, storedPdfKeyFromUrl } from "@/lib/pdf-storage";
 import { updatePdfAction } from "../../actions";
 import PdfReplaceForm from "./pdf-replace-form";
+import SubmitButton from "@/components/submit-button";
 
 export const metadata = {
   title: "資料PDFの編集 | FMC",
@@ -117,12 +118,12 @@ export default async function EditPdfPage(props: PageProps<"/admin/pdfs/[id]">) 
             </datalist>
           </div>
           <div className="sm:col-span-2 flex flex-wrap items-center gap-4">
-            <button
-              type="submit"
-              className="rounded-[4px] bg-accent px-5 py-2.5 text-sm font-medium text-white hover:bg-accent-hover"
-            >
-              保存する
-            </button>
+            <SubmitButton
+            pendingLabel="保存中…"
+            className="rounded-[4px] bg-accent px-5 py-2.5 text-sm font-medium text-white hover:bg-accent-hover"
+          >
+            保存する
+          </SubmitButton>
             <Link href={`/pdfs/${doc.id}`} className="text-sm text-accent hover:underline">
               会員向けページで確認 →
             </Link>

@@ -63,13 +63,16 @@ function DocRow({ doc }: { doc: Doc }) {
 }
 
 export default async function PdfsPage(props: PageProps<"/pdfs">) {
-  await requireActiveSubscriber("/pdfs");
-  const sp = await props.searchParams;
+  // Access check and data load run in parallel to save a database round trip.
+  const [, allDocs, sp] = await Promise.all([
+    requireActiveSubscriber("/pdfs"),
+    db.select().from(pdfDocuments).orderBy(asc(pdfDocuments.sortOrder), asc(pdfDocuments.createdAt)),
+    props.searchParams,
+  ]);
   const pick = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
   const partParam = pick(sp?.part);
   const diseaseParam = pick(sp?.disease);
 
-  const allDocs = await db.select().from(pdfDocuments).orderBy(asc(pdfDocuments.sortOrder), asc(pdfDocuments.createdAt));
 
   const parts = [
     ...BODY_PARTS.map((p) => ({ ...p, docs: allDocs.filter((d) => d.bodyPart === p.slug) })),

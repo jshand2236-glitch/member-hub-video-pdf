@@ -127,3 +127,17 @@ button {
   font-family: var(--font-sans);
   letter-spacing: 0.02em;
 }
+
+/* Loading skeleton shimmer (src/app/loading.tsx) */
+.fmc-skeleton {
+  background: linear-gradient(90deg, var(--soft) 0%, var(--deep) 50%, var(--soft) 100%);
+  background-size: 200% 100%;
+  animation: fmc-shimmer 1.2s ease-in-out infinite;
+}
+@keyframes fmc-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fmc-skeleton { animation: none; }
+}

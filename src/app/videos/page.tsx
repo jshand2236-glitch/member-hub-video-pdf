@@ -69,11 +69,13 @@ function VideoCard({ video, showPart }: { video: Video; showPart: boolean }) {
 }
 
 export default async function VideosPage(props: PageProps<"/videos">) {
-  await requireActiveSubscriber("/videos");
-  const searchParams = await props.searchParams;
+  // Access check and data load run in parallel to save a database round trip.
+  const [, allVideos, searchParams] = await Promise.all([
+    requireActiveSubscriber("/videos"),
+    db.select().from(videos).orderBy(asc(videos.sortOrder), asc(videos.createdAt)),
+    props.searchParams,
+  ]);
   const partParam = Array.isArray(searchParams?.part) ? searchParams.part[0] : searchParams?.part;
-
-  const allVideos = await db.select().from(videos).orderBy(asc(videos.sortOrder), asc(videos.createdAt));
 
   // Group by body part, in head-to-foot order; videos without a part go last.
   const groups: Group[] = [

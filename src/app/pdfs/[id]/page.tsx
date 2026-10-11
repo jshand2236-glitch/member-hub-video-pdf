@@ -7,10 +7,12 @@ import { pdfDocuments, videos } from "@/db/schema";
 import { findBodyPart } from "@/data/body-parts";
 
 export default async function PdfDetailPage(props: PageProps<"/pdfs/[id]">) {
-  await requireActiveSubscriber("/pdfs");
   const { id } = await props.params;
-
-  const [doc] = await db.select().from(pdfDocuments).where(eq(pdfDocuments.id, id)).limit(1);
+  // Access check and data load run in parallel to save a database round trip.
+  const [, [doc]] = await Promise.all([
+    requireActiveSubscriber("/pdfs"),
+    db.select().from(pdfDocuments).where(eq(pdfDocuments.id, id)).limit(1),
+  ]);
   if (!doc) notFound();
 
   const part = findBodyPart(doc.bodyPart);

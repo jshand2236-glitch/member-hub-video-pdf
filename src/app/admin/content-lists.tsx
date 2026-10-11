@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { pdfDocuments, videos } from "@/db/schema";
 import { BODY_PARTS, UNCATEGORIZED, findBodyPart } from "@/data/body-parts";
 import { deletePdfAction, deleteVideoAction, movePdfAction, moveVideoAction } from "./actions";
+import SubmitButton from "@/components/submit-button";
 
 // Admin lists for videos and PDFs, grouped exactly the way members see them
 // (videos by body part; PDFs by body part, then condition), with ↑↓ buttons
@@ -55,15 +56,15 @@ function MoveButtons({
         <form key={dir} action={action}>
           <input type="hidden" name="id" value={id} />
           <input type="hidden" name="dir" value={dir} />
-          <button
-            type="submit"
+          <SubmitButton
+            pendingLabel="…"
             disabled={dir === "up" ? index === 0 : index === count - 1}
             aria-label={`「${title}」を${dir === "up" ? "上" : "下"}へ移動`}
             title={dir === "up" ? "上へ" : "下へ"}
             className={base}
           >
             {dir === "up" ? "↑" : "↓"}
-          </button>
+          </SubmitButton>
         </form>
       ))}
     </div>
@@ -110,9 +111,13 @@ function Row({
         </Link>
         <form action={deleteAction}>
           <input type="hidden" name="id" value={id} />
-          <button type="submit" className="text-xs text-red-600 hover:underline">
+          <SubmitButton
+            pendingLabel="削除中…"
+            confirmMessage={`「${title}」を削除します。元に戻せません。よろしいですか？`}
+            className="text-xs text-red-600 hover:underline"
+          >
             削除
-          </button>
+          </SubmitButton>
         </form>
       </div>
     </li>

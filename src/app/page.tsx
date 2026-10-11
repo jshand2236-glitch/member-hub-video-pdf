@@ -8,9 +8,9 @@ import { INSTRUCTORS } from "@/data/instructors";
 export default async function Home() {
   const session = await auth();
   const freeAccess = isFreeAccessMode();
-  const isSubscribed = session?.user?.id
-    ? await hasActiveSubscription(session.user.id)
-    : false;
+  // No subscription lookup needed while everything is free.
+  const isSubscribed =
+    !freeAccess && session?.user?.id ? await hasActiveSubscription(session.user.id) : false;
   const canViewContent = freeAccess || isSubscribed;
 
   const primaryHref = session?.user

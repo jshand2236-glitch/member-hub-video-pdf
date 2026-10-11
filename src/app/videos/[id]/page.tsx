@@ -16,10 +16,12 @@ function buildEmbedUrl(video: typeof videos.$inferSelect): string {
 }
 
 export default async function VideoDetailPage(props: PageProps<"/videos/[id]">) {
-  await requireActiveSubscriber("/videos");
   const { id } = await props.params;
-
-  const [video] = await db.select().from(videos).where(eq(videos.id, id)).limit(1);
+  // Access check and data load run in parallel to save a database round trip.
+  const [, [video]] = await Promise.all([
+    requireActiveSubscriber("/videos"),
+    db.select().from(videos).where(eq(videos.id, id)).limit(1),
+  ]);
   if (!video) {
     notFound();
   }

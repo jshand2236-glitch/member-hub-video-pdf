@@ -10,6 +10,7 @@ import { BODY_PARTS } from "@/data/body-parts";
 import { INSTRUCTORS } from "@/data/instructors";
 import { addVideoAction, setMemberStatusAction } from "./actions";
 import { PdfAdminList, VideoAdminList } from "./content-lists";
+import SubmitButton from "@/components/submit-button";
 
 export const metadata = {
   title: "管理画面 | FMC",
@@ -183,12 +184,12 @@ export default async function AdminPage(props: PageProps<"/admin">) {
             <input name="embedHash" className={inputClass} />
           </div>
           <div className="sm:col-span-2">
-            <button
-              type="submit"
+            <SubmitButton
+              pendingLabel="追加中…"
               className="rounded-[4px] bg-accent px-5 py-2.5 text-sm font-medium text-white hover:bg-accent-hover"
             >
               動画を追加
-            </button>
+            </SubmitButton>
           </div>
         </form>
 
@@ -237,9 +238,9 @@ function MemberButtons({ id, current }: { id: string; current: MemberStatus }) {
         <form key={a.status} action={setMemberStatusAction}>
           <input type="hidden" name="id" value={id} />
           <input type="hidden" name="status" value={a.status} />
-          <button type="submit" className={`rounded-[4px] px-3 py-1.5 text-xs ${a.className}`}>
+          <SubmitButton pendingLabel="処理中…" className={`rounded-[4px] px-3 py-1.5 text-xs ${a.className}`}>
             {a.label}
-          </button>
+          </SubmitButton>
         </form>
       ))}
     </div>
