@@ -44,6 +44,9 @@ export const videos = pgTable("videos", {
   instructorName: text("instructor_name"),
   // Body part slug from src/data/body-parts.ts (e.g. "lumbar"); null = 未分類
   bodyPart: text("body_part"),
+  // Set when this is a recorded seminar from a 医療者交流会 (shown in the
+  // archive section of /videos). Null for regular lecture videos.
+  eventId: text("event_id").references(() => events.id, { onDelete: "set null" }),
   // "youtube" | "vimeo"
   provider: text("provider").notNull(),
   // YouTube video id (e.g. dQw4w9WgXcQ) or Vimeo video id

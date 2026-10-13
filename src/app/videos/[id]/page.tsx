@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireActiveSubscriber } from "@/lib/require-subscriber";
 import { db } from "@/db";
-import { videos } from "@/db/schema";
+import { events, videos } from "@/db/schema";
+import { formatEventDate } from "@/lib/events";
 import { eq } from "drizzle-orm";
 import { findBodyPart } from "@/data/body-parts";
 
@@ -28,6 +29,9 @@ export default async function VideoDetailPage(props: PageProps<"/videos/[id]">) 
 
   const embedUrl = buildEmbedUrl(video);
   const part = findBodyPart(video.bodyPart);
+  const [event] = video.eventId
+    ? await db.select().from(events).where(eq(events.id, video.eventId)).limit(1)
+    : [];
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
@@ -35,18 +39,29 @@ export default async function VideoDetailPage(props: PageProps<"/videos/[id]">) 
         <Link href="/videos" className="hover:underline">
           動画一覧
         </Link>
-        {part && (
+        {event ? (
           <>
             <span className="mx-2">/</span>
-            <Link href={`/videos?part=${part.slug}`} className="hover:underline">
-              {part.label}
+            <Link href="/videos?part=seminar" className="hover:underline">
+              交流会アーカイブ
             </Link>
           </>
+        ) : (
+          part && (
+            <>
+              <span className="mx-2">/</span>
+              <Link href={`/videos?part=${part.slug}`} className="hover:underline">
+                {part.label}
+              </Link>
+            </>
+          )
         )}
       </nav>
 
       <p className="mt-4 text-sm font-medium text-accent">
-        {[part?.label, video.instructorName].filter(Boolean).join(" ・ ")}
+        {[event ? `${formatEventDate(event.eventDate)} ${event.title}` : part?.label, video.instructorName]
+          .filter(Boolean)
+          .join(" ・ ")}
       </p>
       <h1 className="mt-1 font-serif text-2xl font-semibold">{video.title}</h1>
       {video.description && (

@@ -46,3 +46,8 @@ export async function getEventsForAdmin() {
   ]);
   return { upcoming, past };
 }
+
+/** All events, newest first (for the "which 交流会 is this seminar from?" pickers). */
+export async function getAllEventsNewestFirst() {
+  return db.select().from(events).orderBy(desc(events.eventDate));
+}

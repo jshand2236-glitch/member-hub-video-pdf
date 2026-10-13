@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { pdfDocuments, videos } from "@/db/schema";
 import { BODY_PARTS, UNCATEGORIZED, findBodyPart } from "@/data/body-parts";
+import { formatEventDate, type EventRow } from "@/lib/events";
 import { deletePdfAction, deleteVideoAction, movePdfAction, moveVideoAction } from "./actions";
 import SubmitButton from "@/components/submit-button";
 
@@ -124,7 +125,11 @@ function Row({
   );
 }
 
-export function VideoAdminList({ videos }: { videos: Video[] }) {
+export function VideoAdminList({ videos, events }: { videos: Video[]; events: EventRow[] }) {
+  const eventLabel = (id: string | null) => {
+    const e = id ? events.find((x) => x.id === id) : undefined;
+    return e ? `交流会 ${formatEventDate(e.eventDate)}` : null;
+  };
   if (videos.length === 0) return <p className="mt-8 text-sm text-muted">まだ動画がありません。</p>;
   return (
     <div className="mt-10">
@@ -148,7 +153,9 @@ export function VideoAdminList({ videos }: { videos: Video[] }) {
                   count={g.items.length}
                   id={v.id}
                   title={v.title}
-                  meta={[v.instructorName, v.provider === "youtube" ? "YouTube" : "Vimeo"].filter(Boolean).join(" / ")}
+                  meta={[eventLabel(v.eventId), v.instructorName, v.provider === "youtube" ? "YouTube" : "Vimeo"]
+                    .filter(Boolean)
+                    .join(" / ")}
                   editHref={`/admin/videos/${v.id}`}
                   editLabel="編集"
                   moveAction={moveVideoAction}

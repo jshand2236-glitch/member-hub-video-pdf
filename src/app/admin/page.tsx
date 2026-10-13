@@ -11,7 +11,8 @@ import { INSTRUCTORS } from "@/data/instructors";
 import { addEventAction, addVideoAction, deleteEventAction, setMemberStatusAction } from "./actions";
 import EventFields from "./event-fields";
 import Link from "next/link";
-import { formatEventDate, formatEventTime, getEventsForAdmin, type EventRow } from "@/lib/events";
+import { formatEventDate, formatEventTime, getAllEventsNewestFirst, getEventsForAdmin, type EventRow } from "@/lib/events";
+import EventPicker from "./event-picker";
 import { PdfAdminList, VideoAdminList } from "./content-lists";
 import SubmitButton from "@/components/submit-button";
 
@@ -31,7 +32,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
     redirect("/dashboard");
   }
 
-  const [allVideos, allPdfs, allMembers, eventLists] = await Promise.all([
+  const [allVideos, allPdfs, allMembers, eventLists, allEvents] = await Promise.all([
     db.select().from(videos).orderBy(asc(videos.sortOrder), asc(videos.createdAt)),
     db.select().from(pdfDocuments).orderBy(asc(pdfDocuments.sortOrder), asc(pdfDocuments.createdAt)),
     db
@@ -45,6 +46,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
       .from(users)
       .orderBy(desc(users.createdAt)),
     getEventsForAdmin(),
+    getAllEventsNewestFirst(),
   ]);
   const statusOf = (s: string): MemberStatus => (isMemberStatus(s) ? s : "pending");
   const pendingMembers = allMembers.filter((m) => statusOf(m.status) === "pending");
@@ -200,6 +202,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
                   {p.label}
                 </option>
               ))}
+              <option value="none">部位で分けない（交流会セミナーなど）</option>
             </select>
           </div>
           <div>
@@ -216,6 +219,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
               ))}
             </datalist>
           </div>
+          <EventPicker events={allEvents} className={inputClass} />
           <div>
             <label className={labelClass}>配信元</label>
             <select name="provider" className={inputClass} defaultValue="youtube">
@@ -248,7 +252,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
           </div>
         </form>
 
-        <VideoAdminList videos={allVideos} />
+        <VideoAdminList videos={allVideos} events={allEvents} />
       </section>
 
       {/* PDFs */}

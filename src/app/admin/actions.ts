@@ -21,6 +21,11 @@ async function assertAdmin() {
   }
 }
 
+async function eventExists(id: string) {
+  const [row] = await db.select({ id: events.id }).from(events).where(eq(events.id, id)).limit(1);
+  return !!row;
+}
+
 /** Reads the video form fields shared by the add and edit forms. */
 function readVideoForm(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim().slice(0, 200);
@@ -30,6 +35,7 @@ function readVideoForm(formData: FormData) {
   const providerRaw = String(formData.get("provider") ?? "youtube");
   const videoInput = String(formData.get("providerVideoId") ?? "");
   const embedHashRaw = String(formData.get("embedHash") ?? "").trim();
+  const eventIdRaw = String(formData.get("eventId") ?? "").trim();
   // Accept a full YouTube/Vimeo URL as well as a bare video ID.
   const parsed = parseVideoInput(videoInput, providerRaw);
   if (!title || !parsed) return null;
@@ -42,6 +48,7 @@ function readVideoForm(formData: FormData) {
     provider: parsed.provider,
     providerVideoId: parsed.id,
     embedHash: parsed.provider === "vimeo" ? embedHashRaw || parsed.hash || null : null,
+    eventId: eventIdRaw || null,
   };
 }
 
@@ -49,6 +56,7 @@ export async function addVideoAction(formData: FormData) {
   await assertAdmin();
   const values = readVideoForm(formData);
   if (!values) redirect("/admin?videoError=1#videos");
+  if (values.eventId && !(await eventExists(values.eventId))) values.eventId = null;
   // New videos go to the end of their body-part group.
   await db.insert(videos).values({ ...values, sortOrder: await nextVideoSortOrder(values.bodyPart) });
   revalidatePath("/admin");
@@ -61,6 +69,7 @@ export async function updateVideoAction(formData: FormData) {
   if (!id) return;
   const values = readVideoForm(formData);
   if (!values) redirect(`/admin/videos/${id}?error=1`);
+  if (values.eventId && !(await eventExists(values.eventId))) values.eventId = null;
   const [current] = await db.select().from(videos).where(eq(videos.id, id)).limit(1);
   if (!current) return;
   // Moved to another body part: put it at the end of that group.

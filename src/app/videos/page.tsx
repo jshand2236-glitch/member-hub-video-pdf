@@ -1,9 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import { asc } from "drizzle-orm";
+import { asc, desc } from "drizzle-orm";
 import { requireActiveSubscriber } from "@/lib/require-subscriber";
 import { db } from "@/db";
-import { videos } from "@/db/schema";
+import { events, videos } from "@/db/schema";
+import { formatEventDate } from "@/lib/events";
 import { findInstructor } from "@/data/instructors";
 import { BODY_PARTS, UNCATEGORIZED, findBodyPart } from "@/data/body-parts";
 import FilterChip from "@/components/filter-chip";
@@ -13,7 +14,15 @@ export const metadata = {
 };
 
 type Video = typeof videos.$inferSelect;
-type Group = { slug: string; label: string; en: string; videos: Video[] };
+type Group = {
+  slug: string;
+  label: string;
+  en: string;
+  videos: Video[];
+  /** Only for the 交流会アーカイブ group: videos split by meetup, newest first. */
+  subgroups?: { key: string; label: string; videos: Video[] }[];
+};
+const ARCHIVE_SLUG = "seminar";
 
 function thumbnailFor(video: Video) {
   if (video.thumbnailUrl) return video.thumbnailUrl;
@@ -70,17 +79,39 @@ function VideoCard({ video, showPart }: { video: Video; showPart: boolean }) {
 
 export default async function VideosPage(props: PageProps<"/videos">) {
   // Access check and data load run in parallel to save a database round trip.
-  const [, allVideos, searchParams] = await Promise.all([
+  const [, allVideos, allEvents, searchParams] = await Promise.all([
     requireActiveSubscriber("/videos"),
     db.select().from(videos).orderBy(asc(videos.sortOrder), asc(videos.createdAt)),
+    db.select().from(events).orderBy(desc(events.eventDate)),
     props.searchParams,
   ]);
   const partParam = Array.isArray(searchParams?.part) ? searchParams.part[0] : searchParams?.part;
 
-  // Group by body part, in head-to-foot order; videos without a part go last.
+  // Seminar recordings from 医療者交流会, grouped by meetup (newest first).
+  const archiveSubgroups = allEvents
+    .map((e) => ({
+      key: e.id,
+      label: `${formatEventDate(e.eventDate)} ${e.title}`,
+      videos: allVideos.filter((v) => v.eventId === e.id),
+    }))
+    .filter((g) => g.videos.length > 0);
+  const archive: Group = {
+    slug: ARCHIVE_SLUG,
+    label: "交流会アーカイブ",
+    en: "Meetup archive",
+    videos: archiveSubgroups.flatMap((g) => g.videos),
+    subgroups: archiveSubgroups,
+  };
+
+  // Then by body part, in head-to-foot order; videos without a part go last
+  // (seminar recordings without a part are only shown in the archive).
   const groups: Group[] = [
+    archive,
     ...BODY_PARTS.map((p) => ({ ...p, videos: allVideos.filter((v) => v.bodyPart === p.slug) })),
-    { ...UNCATEGORIZED, videos: allVideos.filter((v) => !findBodyPart(v.bodyPart)) },
+    {
+      ...UNCATEGORIZED,
+      videos: allVideos.filter((v) => !findBodyPart(v.bodyPart) && !archive.videos.includes(v)),
+    },
   ].filter((g) => g.videos.length > 0);
 
   const selected = groups.find((g) => g.slug === partParam);
@@ -90,7 +121,9 @@ export default async function VideosPage(props: PageProps<"/videos">) {
     <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
       <span className="eyebrow">Video</span>
       <h1 className="mt-2 font-serif text-2xl font-semibold sm:text-3xl">会員限定動画</h1>
-      <p className="mt-3 text-sm text-muted">部位を選ぶと、その部位の動画だけを表示します。</p>
+      <p className="mt-3 text-sm text-muted">
+        部位を選ぶと、その部位の動画だけを表示します。医療者交流会のセミナー動画は「交流会アーカイブ」にあります。
+      </p>
 
       {allVideos.length === 0 ? (
         <p className="mt-10 text-sm text-muted">まだ動画が登録されていません。</p>
@@ -127,15 +160,34 @@ export default async function VideosPage(props: PageProps<"/videos">) {
                       href={`/videos?part=${g.slug}`}
                       className="shrink-0 font-sans text-xs tracking-[0.12em] text-accent hover:underline"
                     >
-                      この部位だけ見る →
+                      {g.subgroups ? "アーカイブだけ見る" : "この部位だけ見る"} →
                     </Link>
                   )}
                 </div>
-                <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {g.videos.map((video) => (
-                    <VideoCard key={video.id} video={video} showPart={false} />
-                  ))}
-                </div>
+                {g.subgroups ? (
+                  <div className="mt-6 space-y-10">
+                    {g.subgroups.map((sg) => (
+                      <div key={sg.key}>
+                        <h3 className="flex items-center gap-2 text-sm font-semibold">
+                          <span className="h-3.5 w-[3px] bg-accent" aria-hidden="true" />
+                          {sg.label}
+                          <span className="font-sans text-xs font-normal text-muted">{sg.videos.length}本</span>
+                        </h3>
+                        <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                          {sg.videos.map((video) => (
+                            <VideoCard key={video.id} video={video} showPart={false} />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    {g.videos.map((video) => (
+                      <VideoCard key={video.id} video={video} showPart={false} />
+                    ))}
+                  </div>
+                )}
               </section>
             ))}
           </div>

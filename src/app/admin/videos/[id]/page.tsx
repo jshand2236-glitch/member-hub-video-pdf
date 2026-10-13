@@ -8,6 +8,8 @@ import { videos } from "@/db/schema";
 import { BODY_PARTS } from "@/data/body-parts";
 import { INSTRUCTORS } from "@/data/instructors";
 import { updateVideoAction } from "../../actions";
+import EventPicker from "../../event-picker";
+import { getAllEventsNewestFirst } from "@/lib/events";
 import SubmitButton from "@/components/submit-button";
 
 export const metadata = {
@@ -28,7 +30,10 @@ export default async function EditVideoPage(props: PageProps<"/admin/videos/[id]
   const saved = searchParams?.saved === "1";
   const error = searchParams?.error === "1";
 
-  const [video] = await db.select().from(videos).where(eq(videos.id, id)).limit(1);
+  const [[video], allEvents] = await Promise.all([
+    db.select().from(videos).where(eq(videos.id, id)).limit(1),
+    getAllEventsNewestFirst(),
+  ]);
   if (!video) notFound();
 
   const thumb =
@@ -89,7 +94,7 @@ export default async function EditVideoPage(props: PageProps<"/admin/videos/[id]
             部位
           </label>
           <select id="bodyPart" name="bodyPart" defaultValue={video.bodyPart ?? ""} className={inputClass}>
-            <option value="">未分類</option>
+            <option value="">部位で分けない（交流会セミナーなど）</option>
             {BODY_PARTS.map((p) => (
               <option key={p.slug} value={p.slug}>
                 {p.label}
@@ -115,6 +120,7 @@ export default async function EditVideoPage(props: PageProps<"/admin/videos/[id]
             ))}
           </datalist>
         </div>
+        <EventPicker events={allEvents} defaultValue={video.eventId} className={inputClass} />
         <div>
           <label className={labelClass} htmlFor="provider">
             配信元
