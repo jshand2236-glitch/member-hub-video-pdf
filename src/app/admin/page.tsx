@@ -8,7 +8,10 @@ import { MEMBER_STATUS_LABEL, isMemberStatus, type MemberStatus } from "@/lib/me
 import PdfUploadForm from "./pdf-upload-form";
 import { BODY_PARTS } from "@/data/body-parts";
 import { INSTRUCTORS } from "@/data/instructors";
-import { addVideoAction, setMemberStatusAction } from "./actions";
+import { addEventAction, addVideoAction, deleteEventAction, setMemberStatusAction } from "./actions";
+import EventFields from "./event-fields";
+import Link from "next/link";
+import { formatEventDate, formatEventTime, getEventsForAdmin, type EventRow } from "@/lib/events";
 import { PdfAdminList, VideoAdminList } from "./content-lists";
 import SubmitButton from "@/components/submit-button";
 
@@ -17,7 +20,9 @@ export const metadata = {
 };
 
 export default async function AdminPage(props: PageProps<"/admin">) {
-  const videoError = (await props.searchParams)?.videoError === "1";
+  const searchParams = await props.searchParams;
+  const videoError = searchParams?.videoError === "1";
+  const eventError = searchParams?.eventError === "1";
   const session = await auth();
   if (!session?.user) {
     redirect("/login?callbackUrl=/admin");
@@ -26,7 +31,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
     redirect("/dashboard");
   }
 
-  const [allVideos, allPdfs, allMembers] = await Promise.all([
+  const [allVideos, allPdfs, allMembers, eventLists] = await Promise.all([
     db.select().from(videos).orderBy(asc(videos.sortOrder), asc(videos.createdAt)),
     db.select().from(pdfDocuments).orderBy(asc(pdfDocuments.sortOrder), asc(pdfDocuments.createdAt)),
     db
@@ -39,6 +44,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
       })
       .from(users)
       .orderBy(desc(users.createdAt)),
+    getEventsForAdmin(),
   ]);
   const statusOf = (s: string): MemberStatus => (isMemberStatus(s) ? s : "pending");
   const pendingMembers = allMembers.filter((m) => statusOf(m.status) === "pending");
@@ -112,6 +118,55 @@ export default async function AdminPage(props: PageProps<"/admin">) {
                   </li>
                 );
               })}
+            </ul>
+          </details>
+        )}
+      </section>
+
+      {/* 医療者交流会 */}
+      <section id="events" className="mt-12 scroll-mt-24">
+        <h2 className="text-lg font-semibold">医療者交流会の開催日</h2>
+        <p className="mt-1 text-sm text-muted">登録した開催日は、会員のマイページに表示されます（終わった回は自動で表示されなくなります）。</p>
+        {eventError && (
+          <p role="alert" className="mt-3 rounded-[4px] border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+            開催日と申し込みURL（https:// から始まるもの）を確認してください。
+          </p>
+        )}
+
+        {eventLists.upcoming.length > 0 ? (
+          <ul className="mt-4 divide-y divide-line rounded-[4px] border border-line">
+            {eventLists.upcoming.map((e, i) => (
+              <EventAdminRow key={e.id} event={e} badge={i === 0 ? "次回" : undefined} />
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-4 text-sm text-muted">今後の開催予定はまだ登録されていません。</p>
+        )}
+
+        <details className="mt-6 rounded-[4px] border border-line p-4" open={eventLists.upcoming.length === 0}>
+          <summary className="cursor-pointer text-sm font-medium text-accent">＋ 開催日を追加する</summary>
+          <form action={addEventAction} className="mt-4 grid gap-4 sm:grid-cols-2">
+            <EventFields />
+            <div className="sm:col-span-2">
+              <SubmitButton
+                pendingLabel="追加中…"
+                className="rounded-[4px] bg-accent px-5 py-2.5 text-sm font-medium text-white hover:bg-accent-hover"
+              >
+                開催日を追加
+              </SubmitButton>
+            </div>
+          </form>
+        </details>
+
+        {eventLists.past.length > 0 && (
+          <details className="mt-4">
+            <summary className="cursor-pointer text-sm text-muted hover:text-accent">
+              終了した回（直近{eventLists.past.length}件）
+            </summary>
+            <ul className="mt-2 divide-y divide-line">
+              {eventLists.past.map((e) => (
+                <EventAdminRow key={e.id} event={e} />
+              ))}
             </ul>
           </details>
         )}
@@ -244,5 +299,42 @@ function MemberButtons({ id, current }: { id: string; current: MemberStatus }) {
         </form>
       ))}
     </div>
+  );
+}
+
+function EventAdminRow({ event, badge }: { event: EventRow; badge?: string }) {
+  const time = formatEventTime(event);
+  return (
+    <li className="flex flex-wrap items-center gap-3 px-4 py-3">
+      <div className="min-w-0 flex-1">
+        <p className="font-medium">
+          {formatEventDate(event.eventDate)}
+          {badge && (
+            <span className="ml-2 rounded-full bg-accent px-2 py-0.5 align-middle text-[11px] font-medium text-white">
+              {badge}
+            </span>
+          )}
+        </p>
+        <p className="mt-0.5 text-xs text-muted">
+          {[event.title, time, event.venue].filter(Boolean).join(" / ")}
+        </p>
+      </div>
+      <Link
+        href={`/admin/events/${event.id}`}
+        className="rounded-[4px] border border-accent px-3 py-1 text-xs text-accent hover:bg-accent hover:text-white"
+      >
+        編集
+      </Link>
+      <form action={deleteEventAction}>
+        <input type="hidden" name="id" value={event.id} />
+        <SubmitButton
+          pendingLabel="削除中…"
+          confirmMessage={`${formatEventDate(event.eventDate)}の${event.title}を削除します。よろしいですか？`}
+          className="text-xs text-red-600 hover:underline"
+        >
+          削除
+        </SubmitButton>
+      </form>
+    </li>
   );
 }

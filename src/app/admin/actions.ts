@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { isAdminEmail } from "@/lib/admin";
 import { db } from "@/db";
-import { videos, pdfDocuments, users } from "@/db/schema";
+import { videos, pdfDocuments, users, events } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { deletePdf, storedPdfKeyFromUrl } from "@/lib/pdf-storage";
 import { isBodyPartSlug } from "@/data/body-parts";
@@ -168,4 +168,54 @@ export async function movePdfAction(formData: FormData) {
   await movePdf(id, dir);
   revalidatePath("/admin");
   revalidatePath("/pdfs");
+}
+
+/** Reads the 医療者交流会 form shared by the add and edit forms; null if invalid. */
+function readEventForm(formData: FormData) {
+  const str = (k: string, max: number) => String(formData.get(k) ?? "").trim().slice(0, max);
+  const title = str("title", 100) || "医療者交流会";
+  const eventDate = str("eventDate", 10);
+  const time = (v: string) => (/^\d{1,2}:\d{2}$/.test(v) ? v : null);
+  const applyUrl = str("applyUrl", 500);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(eventDate)) return null;
+  if (applyUrl && !/^https?:\/\//i.test(applyUrl)) return null;
+  return {
+    title,
+    eventDate,
+    startTime: time(str("startTime", 5)),
+    endTime: time(str("endTime", 5)),
+    venue: str("venue", 200) || null,
+    description: str("description", 2000) || null,
+    applyUrl: applyUrl || null,
+  };
+}
+
+export async function addEventAction(formData: FormData) {
+  await assertAdmin();
+  const values = readEventForm(formData);
+  if (!values) redirect("/admin?eventError=1#events");
+  await db.insert(events).values(values);
+  revalidatePath("/admin");
+  revalidatePath("/dashboard");
+}
+
+export async function updateEventAction(formData: FormData) {
+  await assertAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  const values = readEventForm(formData);
+  if (!values) redirect(`/admin/events/${id}?error=1`);
+  await db.update(events).set(values).where(eq(events.id, id));
+  revalidatePath("/admin");
+  revalidatePath("/dashboard");
+  redirect(`/admin/events/${id}?saved=1`);
+}
+
+export async function deleteEventAction(formData: FormData) {
+  await assertAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  await db.delete(events).where(eq(events.id, id));
+  revalidatePath("/admin");
+  revalidatePath("/dashboard");
 }

@@ -6,6 +6,8 @@ import { isFreeAccessMode } from "@/lib/access";
 import ManageBillingButton from "./manage-billing-button";
 import { getMemberStatus, isApprovedMember } from "@/lib/member-status";
 import MemberStatusNotice from "@/components/member-status-notice";
+import UpcomingEvents from "@/components/upcoming-events";
+import { getUpcomingEvents } from "@/lib/events";
 
 export const metadata = {
   title: "マイページ | FMC",
@@ -30,11 +32,12 @@ export default async function DashboardPage() {
 
   const freeAccess = isFreeAccessMode();
 
-  const [active, subscription, approved, memberStatus] = await Promise.all([
+  const [active, subscription, approved, memberStatus, upcomingEvents] = await Promise.all([
     hasActiveSubscription(session.user.id),
     getLatestSubscription(session.user.id),
     isApprovedMember(session.user),
     getMemberStatus(session.user.id),
+    getUpcomingEvents(4),
   ]);
 
   // In free access mode, any logged-in member can view videos/PDFs -
@@ -55,6 +58,8 @@ export default async function DashboardPage() {
           <MemberStatusNotice status={memberStatus} />
         </div>
       )}
+
+      <UpcomingEvents events={upcomingEvents} />
 
       {approved && !freeAccess && (
         <div className="mt-8 rounded-[4px] border border-line p-6">

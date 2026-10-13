@@ -1,4 +1,4 @@
-import { pgTable, text, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, boolean, timestamp, date } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: text("id")
@@ -80,5 +80,24 @@ export const rateLimitEvents = pgTable("rate_limit_events", {
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   bucket: text("bucket").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+});
+
+// 医療者交流会 (offline study meetups, about every two months). Shown on the
+// member dashboard; managed from /admin.
+export const events = pgTable("events", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  title: text("title").notNull(),
+  // Calendar date in Japan time, "YYYY-MM-DD"
+  eventDate: date("event_date", { mode: "string" }).notNull(),
+  // Free text such as "19:00" (optional)
+  startTime: text("start_time"),
+  endTime: text("end_time"),
+  venue: text("venue"),
+  description: text("description"),
+  // Link to an application form (Google Form, LINE, Peatix...) - optional
+  applyUrl: text("apply_url"),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });
