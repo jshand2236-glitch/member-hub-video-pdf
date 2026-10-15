@@ -39,11 +39,11 @@ export default async function VideoDetailPage(props: PageProps<"/videos/[id]">) 
         <Link href="/videos" className="hover:underline">
           動画一覧
         </Link>
-        {event ? (
+        {event || !part ? (
           <>
             <span className="mx-2">/</span>
             <Link href="/videos?part=seminar" className="hover:underline">
-              交流会アーカイブ
+              オフラインセミナー
             </Link>
           </>
         ) : (
@@ -59,7 +59,7 @@ export default async function VideoDetailPage(props: PageProps<"/videos/[id]">) 
       </nav>
 
       <p className="mt-4 text-sm font-medium text-accent">
-        {[event ? `${formatEventDate(event.eventDate)} ${event.title}` : part?.label, video.instructorName]
+        {[event ? `${formatEventDate(event.eventDate)} ${event.title}` : (part?.label ?? "オフラインセミナー"), video.instructorName]
           .filter(Boolean)
           .join(" ・ ")}
       </p>

@@ -202,7 +202,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
                   {p.label}
                 </option>
               ))}
-              <option value="none">部位で分けない（交流会セミナーなど）</option>
+              <option value="none">オフラインセミナー（部位で分けない）</option>
             </select>
           </div>
           <div>

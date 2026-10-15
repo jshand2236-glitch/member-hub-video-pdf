@@ -10,7 +10,7 @@ import UpcomingEvents from "@/components/upcoming-events";
 import { getUpcomingEvents } from "@/lib/events";
 import { db } from "@/db";
 import { videos } from "@/db/schema";
-import { isNotNull } from "drizzle-orm";
+import { isNotNull, isNull, or } from "drizzle-orm";
 
 export const metadata = {
   title: "マイページ | FMC",
@@ -41,7 +41,7 @@ export default async function DashboardPage() {
     isApprovedMember(session.user),
     getMemberStatus(session.user.id),
     getUpcomingEvents(4),
-    db.select({ id: videos.id }).from(videos).where(isNotNull(videos.eventId)),
+    db.select({ id: videos.id }).from(videos).where(or(isNotNull(videos.eventId), isNull(videos.bodyPart))),
   ]);
 
   // In free access mode, any logged-in member can view videos/PDFs -
@@ -125,8 +125,8 @@ export default async function DashboardPage() {
               href="/videos?part=seminar"
               className="rounded-[4px] border border-accent/40 bg-soft p-6 hover:border-accent sm:col-span-2"
             >
-              <span className="eyebrow">MEETUP ARCHIVE</span>
-              <h3 className="mt-1 font-semibold">医療者交流会のセミナー動画を見る</h3>
+              <span className="eyebrow">OFFLINE SEMINAR</span>
+              <h3 className="mt-1 font-semibold">オフラインセミナーの動画を見る</h3>
               <p className="mt-1 text-xs text-muted">参加できなかった回のセミナーも、講師ごとに視聴できます（{seminarVideos.length}本）。</p>
             </Link>
           )}

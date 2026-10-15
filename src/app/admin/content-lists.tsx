@@ -13,12 +13,12 @@ type Video = typeof videos.$inferSelect;
 type Doc = typeof pdfDocuments.$inferSelect;
 const NO_DISEASE = "その他の資料";
 
-function byPart<T extends { bodyPart: string | null }>(items: T[]) {
+function byPart<T extends { bodyPart: string | null }>(items: T[], otherLabel: string = UNCATEGORIZED.label) {
   return [
     ...BODY_PARTS.map((p) => ({ slug: p.slug, label: p.label, items: items.filter((i) => i.bodyPart === p.slug) })),
     {
       slug: UNCATEGORIZED.slug,
-      label: UNCATEGORIZED.label,
+      label: otherLabel,
       items: items.filter((i) => !findBodyPart(i.bodyPart)),
     },
   ].filter((g) => g.items.length > 0);
@@ -138,7 +138,7 @@ export function VideoAdminList({ videos, events }: { videos: Video[]; events: Ev
         会員ページと同じく部位ごとに並んでいます。↑↓ で部位の中での表示順を入れ替えられます。新しく追加した動画はその部位の最後に入ります。
       </p>
       <div className="mt-5 space-y-6">
-        {byPart(videos).map((g) => (
+        {byPart(videos, "オフラインセミナー").map((g) => (
           <div key={g.slug}>
             <p className="flex items-center gap-2 border-b border-line pb-2 text-sm font-semibold">
               <span className="h-3.5 w-[3px] bg-accent" aria-hidden="true" />

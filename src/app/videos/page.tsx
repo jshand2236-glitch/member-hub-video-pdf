@@ -6,7 +6,7 @@ import { db } from "@/db";
 import { events, videos } from "@/db/schema";
 import { formatEventDate } from "@/lib/events";
 import { findInstructor } from "@/data/instructors";
-import { BODY_PARTS, UNCATEGORIZED, findBodyPart } from "@/data/body-parts";
+import { BODY_PARTS, findBodyPart } from "@/data/body-parts";
 import FilterChip from "@/components/filter-chip";
 
 export const metadata = {
@@ -19,7 +19,7 @@ type Group = {
   label: string;
   en: string;
   videos: Video[];
-  /** Only for the 交流会アーカイブ group: videos split by meetup, newest first. */
+  /** Only for the オフラインセミナー group: videos split by meetup, newest first. */
   subgroups?: { key: string; label: string; videos: Video[] }[];
 };
 const ARCHIVE_SLUG = "seminar";
@@ -87,31 +87,33 @@ export default async function VideosPage(props: PageProps<"/videos">) {
   ]);
   const partParam = Array.isArray(searchParams?.part) ? searchParams.part[0] : searchParams?.part;
 
-  // Seminar recordings from 医療者交流会, grouped by meetup (newest first).
-  const archiveSubgroups = allEvents
+  // オフラインセミナー: recordings from 医療者交流会 (linked to a meetup) and
+  // any video without a body part. Grouped by meetup, newest first.
+  const seminarVideos = allVideos.filter((v) => v.eventId || !findBodyPart(v.bodyPart));
+  const eventSubgroups = allEvents
     .map((e) => ({
       key: e.id,
       label: `${formatEventDate(e.eventDate)} ${e.title}`,
-      videos: allVideos.filter((v) => v.eventId === e.id),
+      videos: seminarVideos.filter((v) => v.eventId === e.id),
     }))
     .filter((g) => g.videos.length > 0);
+  const unlinked = seminarVideos.filter((v) => !eventSubgroups.some((g) => g.videos.includes(v)));
   const archive: Group = {
     slug: ARCHIVE_SLUG,
-    label: "交流会アーカイブ",
-    en: "Meetup archive",
-    videos: archiveSubgroups.flatMap((g) => g.videos),
-    subgroups: archiveSubgroups,
+    label: "オフラインセミナー",
+    en: "Offline seminar",
+    videos: seminarVideos,
+    // Only split into headings when at least one meetup is linked.
+    subgroups:
+      eventSubgroups.length > 0
+        ? [...eventSubgroups, ...(unlinked.length ? [{ key: "other", label: "その他のセミナー", videos: unlinked }] : [])]
+        : undefined,
   };
 
-  // Then by body part, in head-to-foot order; videos without a part go last
-  // (seminar recordings without a part are only shown in the archive).
+  // Then by body part, in head-to-foot order.
   const groups: Group[] = [
     archive,
     ...BODY_PARTS.map((p) => ({ ...p, videos: allVideos.filter((v) => v.bodyPart === p.slug) })),
-    {
-      ...UNCATEGORIZED,
-      videos: allVideos.filter((v) => !findBodyPart(v.bodyPart) && !archive.videos.includes(v)),
-    },
   ].filter((g) => g.videos.length > 0);
 
   const selected = groups.find((g) => g.slug === partParam);
@@ -122,7 +124,7 @@ export default async function VideosPage(props: PageProps<"/videos">) {
       <span className="eyebrow">Video</span>
       <h1 className="mt-2 font-serif text-2xl font-semibold sm:text-3xl">会員限定動画</h1>
       <p className="mt-3 text-sm text-muted">
-        部位を選ぶと、その部位の動画だけを表示します。医療者交流会のセミナー動画は「交流会アーカイブ」にあります。
+        部位を選ぶと、その部位の動画だけを表示します。医療者交流会で収録したセミナー動画は「オフラインセミナー」にあります。
       </p>
 
       {allVideos.length === 0 ? (
@@ -160,7 +162,7 @@ export default async function VideosPage(props: PageProps<"/videos">) {
                       href={`/videos?part=${g.slug}`}
                       className="shrink-0 font-sans text-xs tracking-[0.12em] text-accent hover:underline"
                     >
-                      {g.subgroups ? "アーカイブだけ見る" : "この部位だけ見る"} →
+                      {g.slug === ARCHIVE_SLUG ? "セミナーだけ見る" : "この部位だけ見る"} →
                     </Link>
                   )}
                 </div>

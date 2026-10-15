@@ -94,7 +94,7 @@ export default async function EditVideoPage(props: PageProps<"/admin/videos/[id]
             部位
           </label>
           <select id="bodyPart" name="bodyPart" defaultValue={video.bodyPart ?? ""} className={inputClass}>
-            <option value="">部位で分けない（交流会セミナーなど）</option>
+            <option value="">オフラインセミナー（部位で分けない）</option>
             {BODY_PARTS.map((p) => (
               <option key={p.slug} value={p.slug}>
                 {p.label}
