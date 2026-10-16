@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import HeroVideo from "@/components/hero-video";
 import { auth } from "@/auth";
 import { hasActiveSubscription } from "@/lib/subscription";
 import { isFreeAccessMode } from "@/lib/access";
@@ -29,19 +30,7 @@ export default async function Home() {
       {/* ヒーロー */}
       <section className="relative overflow-hidden bg-navy-deep">
         {/* 交流会の様子を背景にループ再生（無音）。動きを減らす設定の人には静止画を表示 */}
-        <video
-          className="hero-bg-video pointer-events-none absolute inset-0 h-full w-full object-cover"
-          poster="/hero-bg.jpg"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-          aria-hidden="true"
-        >
-          <source src="/hero-bg.webm" type="video/webm" />
-          <source src="/hero-bg.mp4" type="video/mp4" />
-        </video>
+        <HeroVideo />
         <div
           className="pointer-events-none absolute inset-0 bg-[url('/hero-bg.jpg')] bg-cover bg-center motion-safe:hidden"
           aria-hidden="true"
