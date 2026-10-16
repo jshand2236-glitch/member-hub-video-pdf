@@ -141,3 +141,9 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .fmc-skeleton { animation: none; }
 }
+
+/* Hero background video: hidden for people who prefer reduced motion
+   (a still image is shown instead, see src/app/page.tsx). */
+@media (prefers-reduced-motion: reduce) {
+  .hero-bg-video { display: none; }
+}

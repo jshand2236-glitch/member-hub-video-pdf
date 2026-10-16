@@ -12,6 +12,7 @@ import { isBodyPartSlug } from "@/data/body-parts";
 import { isMemberStatus } from "@/lib/member-status";
 import { parseVideoInput } from "@/lib/video-id";
 import { movePdf, moveVideo, nextPdfSortOrder, nextVideoSortOrder, type Direction } from "@/lib/ordering";
+import { movePart } from "@/lib/part-order";
 import { queueApprovedEmail } from "@/lib/welcome-email";
 
 async function assertAdmin() {
@@ -227,4 +228,15 @@ export async function deleteEventAction(formData: FormData) {
   await db.delete(events).where(eq(events.id, id));
   revalidatePath("/admin");
   revalidatePath("/dashboard");
+}
+
+export async function movePartAction(formData: FormData) {
+  await assertAdmin();
+  const slug = String(formData.get("id") ?? "");
+  const dir = readDirection(formData);
+  if (!slug || !dir) return;
+  await movePart(slug, dir);
+  revalidatePath("/admin");
+  revalidatePath("/videos");
+  revalidatePath("/pdfs");
 }

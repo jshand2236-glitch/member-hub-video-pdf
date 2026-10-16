@@ -104,3 +104,11 @@ export const events = pgTable("events", {
   applyUrl: text("apply_url"),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });
+
+// Small key/value store for site-wide settings edited from /admin
+// (e.g. "partOrder": JSON array of category slugs for the videos/PDFs pages).
+export const siteSettings = pgTable("site_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+});

@@ -3,7 +3,8 @@ import { asc } from "drizzle-orm";
 import { requireActiveSubscriber } from "@/lib/require-subscriber";
 import { db } from "@/db";
 import { pdfDocuments } from "@/db/schema";
-import { BODY_PARTS, UNCATEGORIZED, findBodyPart } from "@/data/body-parts";
+import { UNCATEGORIZED, findBodyPart } from "@/data/body-parts";
+import { getPartOrder, orderedBodyParts } from "@/lib/part-order";
 import FilterChip from "@/components/filter-chip";
 
 export const metadata = {
@@ -64,9 +65,10 @@ function DocRow({ doc }: { doc: Doc }) {
 
 export default async function PdfsPage(props: PageProps<"/pdfs">) {
   // Access check and data load run in parallel to save a database round trip.
-  const [, allDocs, sp] = await Promise.all([
+  const [, allDocs, partOrder, sp] = await Promise.all([
     requireActiveSubscriber("/pdfs"),
     db.select().from(pdfDocuments).orderBy(asc(pdfDocuments.sortOrder), asc(pdfDocuments.createdAt)),
+    getPartOrder(),
     props.searchParams,
   ]);
   const pick = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
@@ -75,7 +77,7 @@ export default async function PdfsPage(props: PageProps<"/pdfs">) {
 
 
   const parts = [
-    ...BODY_PARTS.map((p) => ({ ...p, docs: allDocs.filter((d) => d.bodyPart === p.slug) })),
+    ...orderedBodyParts(partOrder).map((p) => ({ ...p, docs: allDocs.filter((d) => d.bodyPart === p.slug) })),
     { ...UNCATEGORIZED, docs: allDocs.filter((d) => !findBodyPart(d.bodyPart)) },
   ].filter((p) => p.docs.length > 0);
 

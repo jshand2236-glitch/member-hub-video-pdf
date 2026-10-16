@@ -8,7 +8,8 @@ import { MEMBER_STATUS_LABEL, isMemberStatus, type MemberStatus } from "@/lib/me
 import PdfUploadForm from "./pdf-upload-form";
 import { BODY_PARTS } from "@/data/body-parts";
 import { INSTRUCTORS } from "@/data/instructors";
-import { addEventAction, addVideoAction, deleteEventAction, setMemberStatusAction } from "./actions";
+import { addEventAction, addVideoAction, deleteEventAction, movePartAction, setMemberStatusAction } from "./actions";
+import { SEMINAR_SLUG, categoryLabel, getPartOrder } from "@/lib/part-order";
 import EventFields from "./event-fields";
 import Link from "next/link";
 import { formatEventDate, formatEventTime, getAllEventsNewestFirst, getEventsForAdmin, type EventRow } from "@/lib/events";
@@ -32,7 +33,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
     redirect("/dashboard");
   }
 
-  const [allVideos, allPdfs, allMembers, eventLists, allEvents] = await Promise.all([
+  const [allVideos, allPdfs, allMembers, eventLists, allEvents, partOrder] = await Promise.all([
     db.select().from(videos).orderBy(asc(videos.sortOrder), asc(videos.createdAt)),
     db.select().from(pdfDocuments).orderBy(asc(pdfDocuments.sortOrder), asc(pdfDocuments.createdAt)),
     db
@@ -47,6 +48,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
       .orderBy(desc(users.createdAt)),
     getEventsForAdmin(),
     getAllEventsNewestFirst(),
+    getPartOrder(),
   ]);
   const statusOf = (s: string): MemberStatus => (isMemberStatus(s) ? s : "pending");
   const pendingMembers = allMembers.filter((m) => statusOf(m.status) === "pending");
@@ -174,6 +176,60 @@ export default async function AdminPage(props: PageProps<"/admin">) {
         )}
       </section>
 
+      {/* Category order */}
+      <section id="part-order" className="mt-12 scroll-mt-24">
+        <h2 className="text-lg font-semibold">部位の並び順</h2>
+        <p className="mt-1 text-sm text-muted">
+          動画ページ・資料PDFページで部位を表示する順番です（動画・資料共通）。↑↓ で入れ替えられます。
+        </p>
+        <details className="mt-4 rounded-[4px] border border-line">
+          <summary className="cursor-pointer px-4 py-3 text-sm">
+            <span className="font-medium text-accent">並び順を変える</span>
+            <span className="ml-3 text-xs text-muted">
+              現在: {partOrder.map(categoryLabel).join(" → ")}
+            </span>
+          </summary>
+          <ol className="divide-y divide-line border-t border-line">
+            {partOrder.map((slug, i) => {
+              const count =
+                slug === SEMINAR_SLUG
+                  ? allVideos.filter((v) => v.eventId || !v.bodyPart).length
+                  : allVideos.filter((v) => v.bodyPart === slug).length;
+              const pdfCount = slug === SEMINAR_SLUG ? null : allPdfs.filter((d) => d.bodyPart === slug).length;
+              return (
+                <li key={slug} className="flex items-center gap-3 px-4 py-2">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-soft font-sans text-xs text-muted">
+                    {i + 1}
+                  </span>
+                  <span className="flex-1 text-sm font-medium">
+                    {categoryLabel(slug)}
+                    <span className="ml-2 text-xs font-normal text-muted">
+                      動画{count}本{pdfCount !== null ? `・資料${pdfCount}件` : ""}
+                    </span>
+                  </span>
+                  <div className="flex gap-1">
+                    {(["up", "down"] as const).map((dir) => (
+                      <form key={dir} action={movePartAction}>
+                        <input type="hidden" name="id" value={slug} />
+                        <input type="hidden" name="dir" value={dir} />
+                        <SubmitButton
+                          pendingLabel="…"
+                          disabled={dir === "up" ? i === 0 : i === partOrder.length - 1}
+                          aria-label={`「${categoryLabel(slug)}」を${dir === "up" ? "上" : "下"}へ移動`}
+                          className="flex h-7 w-7 items-center justify-center rounded-[4px] border border-line text-sm leading-none text-muted hover:border-accent hover:text-accent disabled:pointer-events-none disabled:opacity-25"
+                        >
+                          {dir === "up" ? "↑" : "↓"}
+                        </SubmitButton>
+                      </form>
+                    ))}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </details>
+      </section>
+
       {/* Videos */}
       <section id="videos" className="mt-12 scroll-mt-24">
         <h2 className="text-lg font-semibold">動画を追加</h2>
@@ -252,7 +308,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
           </div>
         </form>
 
-        <VideoAdminList videos={allVideos} events={allEvents} />
+        <VideoAdminList videos={allVideos} events={allEvents} order={partOrder} />
       </section>
 
       {/* PDFs */}
@@ -262,7 +318,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
           diseases={[...new Set(allPdfs.map((d) => d.disease).filter((d): d is string => !!d))].sort()}
         />
 
-        <PdfAdminList docs={allPdfs} />
+        <PdfAdminList docs={allPdfs} order={partOrder} />
       </section>
     </div>
   );

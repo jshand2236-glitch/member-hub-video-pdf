@@ -6,7 +6,8 @@ import { db } from "@/db";
 import { events, videos } from "@/db/schema";
 import { formatEventDate } from "@/lib/events";
 import { findInstructor } from "@/data/instructors";
-import { BODY_PARTS, findBodyPart } from "@/data/body-parts";
+import { findBodyPart } from "@/data/body-parts";
+import { SEMINAR_SLUG, getPartOrder, orderedBodyParts } from "@/lib/part-order";
 import FilterChip from "@/components/filter-chip";
 
 export const metadata = {
@@ -22,7 +23,7 @@ type Group = {
   /** Only for the オフラインセミナー group: videos split by meetup, newest first. */
   subgroups?: { key: string; label: string; videos: Video[] }[];
 };
-const ARCHIVE_SLUG = "seminar";
+const ARCHIVE_SLUG = SEMINAR_SLUG;
 
 function thumbnailFor(video: Video) {
   if (video.thumbnailUrl) return video.thumbnailUrl;
@@ -79,10 +80,11 @@ function VideoCard({ video, showPart }: { video: Video; showPart: boolean }) {
 
 export default async function VideosPage(props: PageProps<"/videos">) {
   // Access check and data load run in parallel to save a database round trip.
-  const [, allVideos, allEvents, searchParams] = await Promise.all([
+  const [, allVideos, allEvents, partOrder, searchParams] = await Promise.all([
     requireActiveSubscriber("/videos"),
     db.select().from(videos).orderBy(asc(videos.sortOrder), asc(videos.createdAt)),
     db.select().from(events).orderBy(desc(events.eventDate)),
+    getPartOrder(),
     props.searchParams,
   ]);
   const partParam = Array.isArray(searchParams?.part) ? searchParams.part[0] : searchParams?.part;
@@ -110,11 +112,14 @@ export default async function VideosPage(props: PageProps<"/videos">) {
         : undefined,
   };
 
-  // Then by body part, in head-to-foot order.
-  const groups: Group[] = [
-    archive,
-    ...BODY_PARTS.map((p) => ({ ...p, videos: allVideos.filter((v) => v.bodyPart === p.slug) })),
-  ].filter((g) => g.videos.length > 0);
+  // Then by body part, in the order chosen in /admin (セミナー included).
+  const partGroups: Group[] = orderedBodyParts(partOrder).map((p) => ({
+    ...p,
+    videos: allVideos.filter((v) => v.bodyPart === p.slug),
+  }));
+  const groups: Group[] = partOrder
+    .map((slug) => (slug === ARCHIVE_SLUG ? archive : partGroups.find((g) => g.slug === slug)))
+    .filter((g): g is Group => !!g && g.videos.length > 0);
 
   const selected = groups.find((g) => g.slug === partParam);
   const visibleGroups = selected ? [selected] : groups;

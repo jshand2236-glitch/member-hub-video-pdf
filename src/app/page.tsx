@@ -27,13 +27,28 @@ export default async function Home() {
   return (
     <>
       {/* ヒーロー */}
-      <section className="relative overflow-hidden bg-[linear-gradient(100deg,#091326_0%,#0e1b34_46%,#16264a_100%)]">
+      <section className="relative overflow-hidden bg-navy-deep">
+        {/* 交流会の様子を背景にループ再生（無音）。動きを減らす設定の人には静止画を表示 */}
+        <video
+          className="hero-bg-video pointer-events-none absolute inset-0 h-full w-full object-cover"
+          poster="/hero-bg.jpg"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          aria-hidden="true"
+        >
+          <source src="/hero-bg.webm" type="video/webm" />
+          <source src="/hero-bg.mp4" type="video/mp4" />
+        </video>
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.18]"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 20% 20%, rgba(255,255,255,0.6) 0, transparent 45%), radial-gradient(circle at 80% 70%, rgba(255,255,255,0.35) 0, transparent 40%)",
-          }}
+          className="pointer-events-none absolute inset-0 bg-[url('/hero-bg.jpg')] bg-cover bg-center motion-safe:hidden"
+          aria-hidden="true"
+        />
+        {/* ネイビーを重ねて文字を読みやすく */}
+        <div
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(100deg,rgba(9,19,38,0.92)_0%,rgba(14,27,52,0.82)_46%,rgba(22,38,74,0.72)_100%)]"
           aria-hidden="true"
         />
         <div className="relative mx-auto flex min-h-[74vh] max-w-5xl flex-col justify-center px-4 py-24 sm:px-6">

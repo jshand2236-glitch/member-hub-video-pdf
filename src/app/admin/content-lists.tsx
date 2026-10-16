@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { pdfDocuments, videos } from "@/db/schema";
-import { BODY_PARTS, UNCATEGORIZED, findBodyPart } from "@/data/body-parts";
+import { UNCATEGORIZED, findBodyPart } from "@/data/body-parts";
+import { SEMINAR_SLUG, orderedBodyParts } from "@/lib/part-order";
 import { formatEventDate, type EventRow } from "@/lib/events";
 import { deletePdfAction, deleteVideoAction, movePdfAction, moveVideoAction } from "./actions";
 import SubmitButton from "@/components/submit-button";
@@ -13,15 +14,24 @@ type Video = typeof videos.$inferSelect;
 type Doc = typeof pdfDocuments.$inferSelect;
 const NO_DISEASE = "その他の資料";
 
-function byPart<T extends { bodyPart: string | null }>(items: T[], otherLabel: string = UNCATEGORIZED.label) {
-  return [
-    ...BODY_PARTS.map((p) => ({ slug: p.slug, label: p.label, items: items.filter((i) => i.bodyPart === p.slug) })),
-    {
-      slug: UNCATEGORIZED.slug,
-      label: otherLabel,
-      items: items.filter((i) => !findBodyPart(i.bodyPart)),
-    },
-  ].filter((g) => g.items.length > 0);
+/** Groups items by body part in the admin-chosen order. Items without a part
+ * go to `other`, placed where the seminar entry sits in the order (videos) or
+ * last (PDFs). */
+function byPart<T extends { bodyPart: string | null }>(
+  items: T[],
+  order: string[],
+  other: { label: string; atSeminarPosition: boolean } = { label: UNCATEGORIZED.label, atSeminarPosition: false },
+) {
+  const otherGroup = { slug: UNCATEGORIZED.slug, label: other.label, items: items.filter((i) => !findBodyPart(i.bodyPart)) };
+  const parts = orderedBodyParts(order).map((p) => ({
+    slug: p.slug,
+    label: p.label,
+    items: items.filter((i) => i.bodyPart === p.slug),
+  }));
+  const groups = other.atSeminarPosition
+    ? order.map((s) => (s === SEMINAR_SLUG ? otherGroup : parts.find((g) => g.slug === s)!)).filter(Boolean)
+    : [...parts, otherGroup];
+  return groups.filter((g) => g.items.length > 0);
 }
 
 function byDisease(docs: Doc[]) {
@@ -125,7 +135,7 @@ function Row({
   );
 }
 
-export function VideoAdminList({ videos, events }: { videos: Video[]; events: EventRow[] }) {
+export function VideoAdminList({ videos, events, order }: { videos: Video[]; events: EventRow[]; order: string[] }) {
   const eventLabel = (id: string | null) => {
     const e = id ? events.find((x) => x.id === id) : undefined;
     return e ? `交流会 ${formatEventDate(e.eventDate)}` : null;
@@ -138,7 +148,7 @@ export function VideoAdminList({ videos, events }: { videos: Video[]; events: Ev
         会員ページと同じく部位ごとに並んでいます。↑↓ で部位の中での表示順を入れ替えられます。新しく追加した動画はその部位の最後に入ります。
       </p>
       <div className="mt-5 space-y-6">
-        {byPart(videos, "オフラインセミナー").map((g) => (
+        {byPart(videos, order, { label: "オフラインセミナー", atSeminarPosition: true }).map((g) => (
           <div key={g.slug}>
             <p className="flex items-center gap-2 border-b border-line pb-2 text-sm font-semibold">
               <span className="h-3.5 w-[3px] bg-accent" aria-hidden="true" />
@@ -170,7 +180,7 @@ export function VideoAdminList({ videos, events }: { videos: Video[]; events: Ev
   );
 }
 
-export function PdfAdminList({ docs }: { docs: Doc[] }) {
+export function PdfAdminList({ docs, order }: { docs: Doc[]; order: string[] }) {
   if (docs.length === 0) return <p className="mt-8 text-sm text-muted">まだ資料がありません。</p>;
   return (
     <div className="mt-10">
@@ -179,7 +189,7 @@ export function PdfAdminList({ docs }: { docs: Doc[] }) {
         会員ページと同じく部位・疾患ごとに並んでいます。↑↓ で疾患の中での表示順を入れ替えられます。新しく追加した資料はその疾患の最後に入ります。
       </p>
       <div className="mt-5 space-y-6">
-        {byPart(docs).map((g) => (
+        {byPart(docs, order).map((g) => (
           <div key={g.slug}>
             <p className="flex items-center gap-2 border-b border-line pb-2 text-sm font-semibold">
               <span className="h-3.5 w-[3px] bg-accent" aria-hidden="true" />
