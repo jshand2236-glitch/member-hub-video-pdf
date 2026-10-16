@@ -29,12 +29,8 @@ export default async function Home() {
     <>
       {/* ヒーロー */}
       <section className="relative overflow-hidden bg-navy-deep">
-        {/* 交流会の様子を背景にループ再生（無音）。動きを減らす設定の人には静止画を表示 */}
+        {/* 交流会の様子を背景にループ再生（無音）。スマホは縦長の専用動画 */}
         <HeroVideo />
-        <div
-          className="pointer-events-none absolute inset-0 bg-[url('/hero-bg.jpg')] bg-cover bg-center motion-safe:hidden"
-          aria-hidden="true"
-        />
         {/* ネイビーを重ねて文字を読みやすく */}
         <div
           className="pointer-events-none absolute inset-0 bg-[linear-gradient(100deg,rgba(9,19,38,0.92)_0%,rgba(14,27,52,0.82)_46%,rgba(22,38,74,0.72)_100%)]"
