@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Nav from "@/components/nav";
 import "./globals.css";
+import Jp from "@/components/jp";
 
 export const metadata: Metadata = {
   title: "FUKUOKA MEDICAL CONNECT（FMC）| 会員限定動画・資料",
@@ -27,7 +28,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 className="h-auto w-[150px]"
               />
               <p className="mt-3 text-xs text-muted">
-                学び続ける医療者のための、会員制プラットフォーム
+                <Jp>学び続ける医療者のための、会員制プラットフォーム</Jp>
               </p>
             </div>
             <div className="flex flex-wrap gap-5 text-xs text-muted">

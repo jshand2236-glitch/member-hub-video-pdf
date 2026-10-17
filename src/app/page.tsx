@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import HeroVideo from "@/components/hero-video";
+import Jp from "@/components/jp";
 import { auth } from "@/auth";
 import { hasActiveSubscription } from "@/lib/subscription";
 import { isFreeAccessMode } from "@/lib/access";
@@ -51,9 +52,9 @@ export default async function Home() {
             学び続ける場所。
           </h1>
           <p className="mt-8 max-w-xl text-sm leading-loose text-white/80 sm:text-base">
-            現場で使える技術を届ける「動画講義」と、繰り返し学び直せる「資料PDF」。
-            <br className="hidden sm:block" />
-            福岡の医療者が学び続けるための環境が、ここにあります。
+            <Jp>現場で使える技術を届ける「動画講義」と、繰り返し学び直せる「資料PDF」。</Jp>
+            <br />
+            <Jp>福岡の医療者が学び続けるための環境が、ここにあります。</Jp>
           </p>
           <div className="mt-10 flex flex-wrap gap-4">
             <Link href={primaryHref} className="btn btn-primary">
@@ -74,10 +75,11 @@ export default async function Home() {
         <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6 sm:py-24">
           <span className="eyebrow">Two ways to learn</span>
           <h2 className="mt-4 font-serif text-2xl font-semibold sm:text-3xl">
-            観て学ぶ。読んで、深める。
+            <Jp>観て学ぶ。読んで、深める。</Jp>
           </h2>
           <p className="mt-4 max-w-2xl text-sm leading-loose text-muted">
-            目的に合わせて、学び方を選べます。どちらも会員登録だけでご利用いただけます。
+            <Jp>目的に合わせて、学び方を選べます。</Jp>
+            <Jp>どちらも会員登録だけでご利用いただけます。</Jp>
           </p>
 
           <div className="mt-12 grid gap-6 md:grid-cols-2">
@@ -85,8 +87,8 @@ export default async function Home() {
               <span className="eyebrow">Video</span>
               <h3 className="mt-3 font-serif text-xl font-semibold">会員限定動画</h3>
               <p className="mt-4 flex-1 text-sm leading-loose text-muted">
-                3名の講師が持ち回りで、臨床にそのまま活かせる技術と考え方を配信。
-                講師ごとに整理されているので、学びたいテーマからすぐに辿り着けます。
+                <Jp>3名の講師が持ち回りで、臨床にそのまま活かせる技術と考え方を配信。</Jp>
+                <Jp>講師ごとに整理されているので、学びたいテーマからすぐに辿り着けます。</Jp>
               </p>
               <Link
                 href={canViewContent ? "/videos" : "/register"}
@@ -100,8 +102,8 @@ export default async function Home() {
               <span className="eyebrow">Document</span>
               <h3 className="mt-3 font-serif text-xl font-semibold">資料PDF</h3>
               <p className="mt-4 flex-1 text-sm leading-loose text-muted">
-                講義で使用した資料やまとめノートを会員限定で公開。
-                ブラウザ上でそのまま閲覧でき、現場での確認にも使えます。
+                <Jp>講義で使用した資料やまとめノートを会員限定で公開。</Jp>
+                <Jp>ブラウザ上でそのまま閲覧でき、現場での確認にも使えます。</Jp>
               </p>
               <Link
                 href={canViewContent ? "/pdfs" : "/register"}
@@ -124,10 +126,13 @@ export default async function Home() {
             行動を、医療の未来へ。
           </h2>
           <p className="mt-8 text-sm leading-loose text-muted">
-            技術は、受け取って終わりではありません。
-            学び続けた人だけが、目の前の患者様を変えられる。
-            職種や経験の垣根を越えて学び合う医療者のために、
-            動画と資料をひとつの場所にまとめました。
+            <Jp>技術は、受け取って終わりではありません。</Jp>
+            <br />
+            <Jp>学び続けた人だけが、目の前の患者様を変えられる。</Jp>
+            <br />
+            <Jp>職種や経験の垣根を越えて学び合う医療者のために、</Jp>
+            <wbr />
+            <Jp>動画と資料をひとつの場所にまとめました。</Jp>
           </p>
         </div>
       </section>
@@ -137,7 +142,7 @@ export default async function Home() {
         <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6 sm:py-24">
           <span className="eyebrow">Instructors</span>
           <h2 className="mt-4 font-serif text-2xl font-semibold sm:text-3xl">
-            配信するのは、この3名。
+            <Jp>配信するのは、この3名。</Jp>
           </h2>
 
           <div className="mt-12 grid gap-6 sm:grid-cols-3">
@@ -162,9 +167,9 @@ export default async function Home() {
                   </span>
                   <h3 className="mt-2 font-serif text-lg font-semibold">{instructor.name}</h3>
                   {instructor.title && (
-                    <p className="mt-3 text-xs leading-relaxed text-muted">{instructor.title}</p>
+                    <p className="mt-3 text-xs leading-relaxed text-muted"><Jp>{instructor.title}</Jp></p>
                   )}
-                  <p className={`${instructor.title ? "mt-1" : "mt-3"} text-xs text-muted`}>専門：{instructor.specialty}</p>
+                  <p className={`${instructor.title ? "mt-1" : "mt-3"} text-xs text-muted`}><Jp>{`専門：${instructor.specialty}`}</Jp></p>
                 </div>
               </Link>
             ))}
@@ -189,9 +194,11 @@ export default async function Home() {
             学び続ける医療者へ。
           </h2>
           <p className="mt-6 text-sm leading-loose text-white/80">
-            {freeAccess
-              ? "会員登録すると、限定公開の動画と資料PDFをすべてご覧いただけます。"
-              : "月額プランに登録すると、限定公開の動画と資料PDFをすべてご覧いただけます。"}
+            <Jp>
+              {freeAccess
+                ? "会員登録すると、限定公開の動画と資料PDFをすべてご覧いただけます。"
+                : "月額プランに登録すると、限定公開の動画と資料PDFをすべてご覧いただけます。"}
+            </Jp>
           </p>
           <div className="mt-10 flex flex-wrap justify-center gap-4">
             <Link href={primaryHref} className="btn btn-primary">

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { INSTRUCTORS } from "@/data/instructors";
+import Jp from "@/components/jp";
 
 export const metadata = {
   title: "講師紹介 | FMC",
@@ -15,7 +16,7 @@ export default function InstructorsPage() {
             講師紹介
           </h1>
           <p className="mt-4 text-sm leading-loose text-white/75">
-            会員限定動画は、この3名の講師が持ち回りで配信しています。
+            <Jp>会員限定動画は、この3名の講師が持ち回りで配信しています。</Jp>
           </p>
         </div>
       </section>
@@ -49,15 +50,18 @@ export default function InstructorsPage() {
                     {instructor.nameReading}
                   </p>
 
-                  {instructor.title && <p className="mt-5 text-sm font-medium">{instructor.title}</p>}
+                  {instructor.title && <p className="mt-5 text-sm font-medium"><Jp>{instructor.title}</Jp></p>}
                   <p className={`${instructor.title ? "mt-1" : "mt-5"} text-sm text-muted`}>
-                    {instructor.qualifications.join("・")}
+                    <span className="inline-block">{instructor.qualifications.join("・")}</span>
                     {instructor.specialty && (
-                      <span> ／ 専門：{instructor.specialty}</span>
+                      <>
+                        {" "}
+                        <span className="inline-block">／ 専門：{instructor.specialty}</span>
+                      </>
                     )}
                   </p>
 
-                  <p className="mt-5 text-sm leading-loose text-muted">{instructor.bio}</p>
+                  <p className="mt-5 text-sm leading-loose text-muted"><Jp>{instructor.bio}</Jp></p>
 
                   <div className="mt-6">
                     <h3 className="eyebrow">Career</h3>
@@ -68,7 +72,7 @@ export default function InstructorsPage() {
                             className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
                             aria-hidden="true"
                           />
-                          <span>{item}</span>
+                          <span><Jp>{item}</Jp></span>
                         </li>
                       ))}
                     </ul>

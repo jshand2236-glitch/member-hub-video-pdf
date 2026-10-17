@@ -16,6 +16,7 @@
     "@netlify/blobs": "^11.1.1",
     "@netlify/database": "^2.0.0",
     "bcryptjs": "^3.0.3",
+    "budoux": "^0.9.3",
     "drizzle-orm": "^0.45.2",
     "next": "16.3.6",
     "next-auth": "^5.0.0-beta.32",

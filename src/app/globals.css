@@ -141,3 +141,11 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .fmc-skeleton { animation: none; }
 }
+
+/* 日本語を文節単位で折り返す（<Jp> と併用）。長い英数字だけは枠内で折る */
+.jp {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  line-break: strict;
+  text-wrap: pretty;
+}
