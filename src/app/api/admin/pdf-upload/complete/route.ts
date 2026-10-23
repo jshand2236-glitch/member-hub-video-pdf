@@ -8,6 +8,7 @@ import { pdfDocuments } from "@/db/schema";
 import { finalizePdf, PDF_KEY_PATTERN, PDF_MAX_PARTS } from "@/lib/pdf-storage";
 import { isBodyPartSlug } from "@/data/body-parts";
 import { nextPdfSortOrder } from "@/lib/ordering";
+import { parsePublishAt } from "@/lib/publish";
 
 const bodySchema = z.object({
   key: z.string().regex(PDF_KEY_PATTERN),
@@ -18,6 +19,7 @@ const bodySchema = z.object({
   description: z.string().trim().max(2000).optional(),
   bodyPart: z.string().optional(),
   disease: z.string().trim().max(100).optional(),
+  publishAt: z.string().optional(),
 });
 
 // Called once every chunk has been uploaded: makes the file servable and
@@ -32,7 +34,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "入力内容が正しくありません" }, { status: 400 });
   }
-  const { key, parts, size, filename, title, description, bodyPart, disease } = parsed.data;
+  const { key, parts, size, filename, title, description, bodyPart, disease, publishAt } = parsed.data;
 
   const ok = await finalizePdf(key, { parts, size, filename });
   if (!ok) {
@@ -46,6 +48,7 @@ export async function POST(req: NextRequest) {
     url: `/api/pdfs/${key}`,
     bodyPart: part,
     disease: disease || null,
+    publishAt: parsePublishAt(publishAt),
     // New PDFs go to the end of their part/condition group.
     sortOrder: await nextPdfSortOrder(part, disease || null),
   });

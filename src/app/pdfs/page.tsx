@@ -1,3 +1,4 @@
+import { isPublishedSql } from "@/lib/publish";
 import Link from "next/link";
 import { asc } from "drizzle-orm";
 import { requireActiveSubscriber } from "@/lib/require-subscriber";
@@ -67,7 +68,7 @@ export default async function PdfsPage(props: PageProps<"/pdfs">) {
   // Access check and data load run in parallel to save a database round trip.
   const [, allDocs, partOrder, sp] = await Promise.all([
     requireActiveSubscriber("/pdfs"),
-    db.select().from(pdfDocuments).orderBy(asc(pdfDocuments.sortOrder), asc(pdfDocuments.createdAt)),
+    db.select().from(pdfDocuments).where(isPublishedSql(pdfDocuments.publishAt)).orderBy(asc(pdfDocuments.sortOrder), asc(pdfDocuments.createdAt)),
     getPartOrder(),
     props.searchParams,
   ]);

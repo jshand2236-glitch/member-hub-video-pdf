@@ -1,3 +1,4 @@
+import { isPublishedSql } from "@/lib/publish";
 import Image from "next/image";
 import Link from "next/link";
 import { asc, desc } from "drizzle-orm";
@@ -82,7 +83,7 @@ export default async function VideosPage(props: PageProps<"/videos">) {
   // Access check and data load run in parallel to save a database round trip.
   const [, allVideos, allEvents, partOrder, searchParams] = await Promise.all([
     requireActiveSubscriber("/videos"),
-    db.select().from(videos).orderBy(asc(videos.sortOrder), asc(videos.createdAt)),
+    db.select().from(videos).where(isPublishedSql(videos.publishAt)).orderBy(asc(videos.sortOrder), asc(videos.createdAt)),
     db.select().from(events).orderBy(desc(events.eventDate)),
     getPartOrder(),
     props.searchParams,

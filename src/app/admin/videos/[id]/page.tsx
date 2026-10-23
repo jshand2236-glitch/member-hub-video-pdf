@@ -9,6 +9,7 @@ import { BODY_PARTS } from "@/data/body-parts";
 import { INSTRUCTORS } from "@/data/instructors";
 import { updateVideoAction } from "../../actions";
 import EventPicker from "../../event-picker";
+import PublishAtField from "../../publish-at-field";
 import { getAllEventsNewestFirst } from "@/lib/events";
 import SubmitButton from "@/components/submit-button";
 
@@ -121,6 +122,7 @@ export default async function EditVideoPage(props: PageProps<"/admin/videos/[id]
           </datalist>
         </div>
         <EventPicker events={allEvents} defaultValue={video.eventId} className={inputClass} />
+        <PublishAtField defaultValue={video.publishAt} inputClass={inputClass} labelClass={labelClass} />
         <div>
           <label className={labelClass} htmlFor="provider">
             配信元

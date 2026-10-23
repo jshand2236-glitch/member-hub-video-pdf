@@ -55,6 +55,8 @@ export const videos = pgTable("videos", {
   embedHash: text("embed_hash"),
   thumbnailUrl: text("thumbnail_url"),
   sortOrder: integer("sort_order").notNull().default(0),
+  // 予約配信: この日時になるまで会員には表示しない。null = すぐ公開
+  publishAt: timestamp("publish_at", { mode: "date" }),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });
 
@@ -71,6 +73,8 @@ export const pdfDocuments = pgTable("pdf_documents", {
   // Condition this document is about, e.g. "腰椎椎間板ヘルニア" (free text)
   disease: text("disease"),
   sortOrder: integer("sort_order").notNull().default(0),
+  // 予約配信: この日時になるまで会員には表示しない。null = すぐ公開
+  publishAt: timestamp("publish_at", { mode: "date" }),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });
 

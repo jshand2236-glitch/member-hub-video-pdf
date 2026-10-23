@@ -5,6 +5,7 @@ import { SEMINAR_SLUG, orderedBodyParts } from "@/lib/part-order";
 import { formatEventDate, type EventRow } from "@/lib/events";
 import { deletePdfAction, deleteVideoAction, movePdfAction, moveVideoAction } from "./actions";
 import SubmitButton from "@/components/submit-button";
+import { formatPublishAt, isPublished } from "@/lib/publish-format";
 
 // Admin lists for videos and PDFs, grouped exactly the way members see them
 // (videos by body part; PDFs by body part, then condition), with ↑↓ buttons
@@ -88,6 +89,7 @@ function Row({
   id,
   title,
   meta,
+  publishAt,
   editHref,
   editLabel,
   moveAction,
@@ -98,6 +100,7 @@ function Row({
   id: string;
   title: string;
   meta: string;
+  publishAt: Date | null;
   editHref: string;
   editLabel: string;
   moveAction: (formData: FormData) => Promise<void>;
@@ -109,7 +112,14 @@ function Row({
         {index + 1}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="font-medium leading-snug">{title}</p>
+        <p className="font-medium leading-snug">
+          {!isPublished(publishAt) && publishAt && (
+            <span className="mr-2 inline-block rounded-full bg-accent/15 px-2 py-0.5 align-middle font-sans text-[11px] font-medium text-accent">
+              予約 {formatPublishAt(publishAt)} 公開
+            </span>
+          )}
+          {title}
+        </p>
         {meta && <p className="mt-0.5 line-clamp-1 text-xs text-muted">{meta}</p>}
       </div>
       <div className="flex items-center gap-3">
@@ -166,6 +176,7 @@ export function VideoAdminList({ videos, events, order }: { videos: Video[]; eve
                   meta={[eventLabel(v.eventId), v.instructorName, v.provider === "youtube" ? "YouTube" : "Vimeo"]
                     .filter(Boolean)
                     .join(" / ")}
+                  publishAt={v.publishAt}
                   editHref={`/admin/videos/${v.id}`}
                   editLabel="編集"
                   moveAction={moveVideoAction}
@@ -208,6 +219,7 @@ export function PdfAdminList({ docs, order }: { docs: Doc[]; order: string[] }) 
                       id={d.id}
                       title={d.title}
                       meta={d.description ?? ""}
+                      publishAt={d.publishAt}
                       editHref={`/admin/pdfs/${d.id}`}
                       editLabel="編集・差し替え"
                       moveAction={movePdfAction}

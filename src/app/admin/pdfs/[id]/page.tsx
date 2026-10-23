@@ -10,6 +10,7 @@ import { getPdfManifest, storedPdfKeyFromUrl } from "@/lib/pdf-storage";
 import { updatePdfAction } from "../../actions";
 import PdfReplaceForm from "./pdf-replace-form";
 import SubmitButton from "@/components/submit-button";
+import PublishAtField from "../../publish-at-field";
 
 export const metadata = {
   title: "資料PDFの編集 | FMC",
@@ -117,6 +118,7 @@ export default async function EditPdfPage(props: PageProps<"/admin/pdfs/[id]">) 
               ))}
             </datalist>
           </div>
+          <PublishAtField defaultValue={doc.publishAt} inputClass={inputClass} labelClass={labelClass} />
           <div className="sm:col-span-2 flex flex-wrap items-center gap-4">
             <SubmitButton
             pendingLabel="保存中…"

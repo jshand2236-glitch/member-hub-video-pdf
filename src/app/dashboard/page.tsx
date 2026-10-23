@@ -1,3 +1,4 @@
+import { isPublishedSql } from "@/lib/publish";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
@@ -10,7 +11,7 @@ import UpcomingEvents from "@/components/upcoming-events";
 import { getUpcomingEvents } from "@/lib/events";
 import { db } from "@/db";
 import { videos } from "@/db/schema";
-import { isNotNull, isNull, or } from "drizzle-orm";
+import { and, isNotNull, isNull, or } from "drizzle-orm";
 
 export const metadata = {
   title: "マイページ | FMC",
@@ -41,7 +42,7 @@ export default async function DashboardPage() {
     isApprovedMember(session.user),
     getMemberStatus(session.user.id),
     getUpcomingEvents(4),
-    db.select({ id: videos.id }).from(videos).where(or(isNotNull(videos.eventId), isNull(videos.bodyPart))),
+    db.select({ id: videos.id }).from(videos).where(and(or(isNotNull(videos.eventId), isNull(videos.bodyPart)), isPublishedSql(videos.publishAt))),
   ]);
 
   // In free access mode, any logged-in member can view videos/PDFs -
@@ -78,7 +79,8 @@ export default async function DashboardPage() {
               </p>
               {subscription.currentPeriodEnd && (
                 <p className="text-muted">
-                  次回更新日: {subscription.currentPeriodEnd.toLocaleDateString("ja-JP")}
+                  {subscription.status === "trialing" ? "無料期間の終了日（初回のお支払い日）" : "次回更新日"}:{" "}
+                  {subscription.currentPeriodEnd.toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })}
                   {subscription.cancelAtPeriodEnd && "（この期間で解約予定）"}
                 </p>
               )}

@@ -1,27 +1,37 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { requireActiveSubscriber } from "@/lib/require-subscriber";
 import { db } from "@/db";
 import { pdfDocuments, videos } from "@/db/schema";
 import { findBodyPart } from "@/data/body-parts";
+import { isAdminEmail } from "@/lib/admin";
+import { formatPublishAt, isPublished, isPublishedSql } from "@/lib/publish";
 
 export default async function PdfDetailPage(props: PageProps<"/pdfs/[id]">) {
   const { id } = await props.params;
   // Access check and data load run in parallel to save a database round trip.
-  const [, [doc]] = await Promise.all([
+  const [session, [doc]] = await Promise.all([
     requireActiveSubscriber("/pdfs"),
     db.select().from(pdfDocuments).where(eq(pdfDocuments.id, id)).limit(1),
   ]);
-  if (!doc) notFound();
+  const isAdmin = isAdminEmail(session.user?.email);
+  // 予約配信中の資料は公開日時まで会員には見せない（管理者は確認用に見られる）
+  if (!doc || (!isPublished(doc.publishAt) && !isAdmin)) notFound();
+  const scheduled = !isPublished(doc.publishAt);
 
   const part = findBodyPart(doc.bodyPart);
   const relatedVideos = part
-    ? await db.select().from(videos).where(eq(videos.bodyPart, part.slug)).orderBy(asc(videos.sortOrder), asc(videos.createdAt)).limit(3)
+    ? await db.select().from(videos).where(and(eq(videos.bodyPart, part.slug), isPublishedSql(videos.publishAt))).orderBy(asc(videos.sortOrder), asc(videos.createdAt)).limit(3)
     : [];
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
+      {scheduled && doc.publishAt && (
+        <p className="mb-6 rounded-[4px] border border-accent/40 bg-accent/10 px-4 py-3 text-sm">
+          予約配信：{formatPublishAt(doc.publishAt)} に公開されます。まだ会員には表示されていません（管理者のみ確認できます）。
+        </p>
+      )}
       <nav aria-label="パンくず" className="text-sm text-muted">
         <Link href="/pdfs" className="hover:underline">
           資料PDF

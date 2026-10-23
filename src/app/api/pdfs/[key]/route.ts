@@ -4,6 +4,11 @@ import { isFreeAccessMode } from "@/lib/access";
 import { hasActiveSubscription } from "@/lib/subscription";
 import { isApprovedMember } from "@/lib/member-status";
 import { getPdfManifest, PDF_KEY_PATTERN, streamPdf } from "@/lib/pdf-storage";
+import { db } from "@/db";
+import { pdfDocuments } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { isAdminEmail } from "@/lib/admin";
+import { isPublished } from "@/lib/publish";
 
 // Member-only PDF download/viewer endpoint. Same access rule as /pdfs.
 export async function GET(req: NextRequest, ctx: RouteContext<"/api/pdfs/[key]">) {
@@ -23,6 +28,16 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/pdfs/[key]">
   if (!PDF_KEY_PATTERN.test(key)) {
     return new NextResponse("Not found", { status: 404 });
   }
+  // 予約配信中の資料は公開日時まで管理者以外には返さない
+  const [doc] = await db
+    .select({ publishAt: pdfDocuments.publishAt })
+    .from(pdfDocuments)
+    .where(eq(pdfDocuments.url, `/api/pdfs/${key}`))
+    .limit(1);
+  if (doc && !isPublished(doc.publishAt) && !isAdminEmail(session.user.email)) {
+    return new NextResponse("Not found", { status: 404 });
+  }
+
   const manifest = await getPdfManifest(key);
   if (!manifest) {
     return new NextResponse("Not found", { status: 404 });

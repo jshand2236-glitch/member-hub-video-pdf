@@ -1,5 +1,6 @@
 "use server";
 
+import { parsePublishAt } from "@/lib/publish";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
@@ -50,6 +51,7 @@ function readVideoForm(formData: FormData) {
     providerVideoId: parsed.id,
     embedHash: parsed.provider === "vimeo" ? embedHashRaw || parsed.hash || null : null,
     eventId: eventIdRaw || null,
+    publishAt: parsePublishAt(formData.get("publishAt")),
   };
 }
 
@@ -110,7 +112,14 @@ export async function updatePdfAction(formData: FormData) {
   const sortOrder = sameGroup ? current.sortOrder : await nextPdfSortOrder(bodyPart, disease || null);
   await db
     .update(pdfDocuments)
-    .set({ title, description: description || null, bodyPart, disease: disease || null, sortOrder })
+    .set({
+      title,
+      description: description || null,
+      bodyPart,
+      disease: disease || null,
+      sortOrder,
+      publishAt: parsePublishAt(formData.get("publishAt")),
+    })
     .where(eq(pdfDocuments.id, id));
   revalidatePath("/admin");
   revalidatePath("/pdfs");

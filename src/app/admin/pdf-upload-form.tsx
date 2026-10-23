@@ -1,4 +1,5 @@
 "use client";
+import PublishAtField from "./publish-at-field";
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -41,6 +42,7 @@ export default function PdfUploadForm({ diseases }: { diseases: string[] }) {
           description: String(data.get("description") ?? ""),
           bodyPart: String(data.get("bodyPart") ?? ""),
           disease: String(data.get("disease") ?? ""),
+          publishAt: String(data.get("publishAt") ?? ""),
         }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? "登録に失敗しました");
@@ -94,6 +96,7 @@ export default function PdfUploadForm({ diseases }: { diseases: string[] }) {
         <label className={labelClass}>説明（任意）</label>
         <textarea name="description" rows={2} className={inputClass} />
       </div>
+      <PublishAtField id="add-pdf-publishAt" inputClass={inputClass} labelClass={labelClass} />
       <div className="sm:col-span-2">
         <label className={labelClass}>PDFファイル</label>
         <input name="file" type="file" accept="application/pdf,.pdf" required className={`${inputClass} py-1.5`} />
