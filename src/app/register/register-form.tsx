@@ -50,6 +50,16 @@ export default function RegisterForm() {
         />
       </div>
 
+      <label className="flex items-start gap-2.5 rounded-[4px] border border-line px-3 py-3 text-sm">
+        <input type="checkbox" name="student" className="mt-0.5 h-4 w-4 accent-accent" />
+        <span>
+          学生です（学割を希望）
+          <span className="mt-0.5 block text-xs text-muted">
+            運営が確認のうえ、学割価格（月額 ¥1,980）でお申し込みいただけます。確認のため、学校名などをお伺いすることがあります。
+          </span>
+        </span>
+      </label>
+
       {state.error && <p className="text-sm text-red-600">{state.error}</p>}
 
       <button

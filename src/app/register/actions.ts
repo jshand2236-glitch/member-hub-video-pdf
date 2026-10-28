@@ -24,6 +24,7 @@ export async function registerAction(
     .trim()
     .toLowerCase();
   const password = String(formData.get("password") ?? "");
+  const student = formData.get("student") ? "requested" : null;
 
   if (!email || !email.includes("@")) {
     return { error: "有効なメールアドレスを入力してください" };
@@ -48,8 +49,9 @@ export async function registerAction(
     email,
     passwordHash,
     status: "pending",
+    student,
   });
-  queueAdminSignupNotice({ email, name: name || null });
+  queueAdminSignupNotice({ email, name: name || null, student: !!student });
   queueWelcomeEmail({ email, name: name || null });
 
   // New sign-ups wait for admin approval first; the dashboard shows that

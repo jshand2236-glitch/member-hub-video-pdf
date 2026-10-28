@@ -9,6 +9,7 @@ import { isTrialEligible, TRIAL_DAYS } from "@/lib/billing";
 import { hasActiveSubscription } from "@/lib/subscription";
 import { isApprovedMember } from "@/lib/member-status";
 import { isFreeAccessMode } from "@/lib/access";
+import { planFor, priceIdFor } from "@/lib/plans";
 
 export async function POST() {
   const session = await auth();
@@ -18,14 +19,6 @@ export async function POST() {
 
   if (isFreeAccessMode()) {
     return NextResponse.json({ error: "現在は無料公開中のため、お申し込みは不要です" }, { status: 400 });
-  }
-
-  const priceId = process.env.STRIPE_PRICE_ID;
-  if (!priceId) {
-    return NextResponse.json(
-      { error: "STRIPE_PRICE_ID が設定されていません" },
-      { status: 500 },
-    );
   }
 
   const [dbUser] = await db
@@ -49,6 +42,23 @@ export async function POST() {
     return NextResponse.json({ url: `${getAppUrl()}/dashboard` });
   }
 
+  if (dbUser.student === "requested") {
+    return NextResponse.json(
+      { error: "学割の確認中です。運営の確認後にお申し込みいただけます" },
+      { status: 403 },
+    );
+  }
+
+  // 学割 → 交流会当日 → 一般 の順に価格を決める（サーバー側で判定）
+  const plan = planFor(dbUser);
+  const priceId = priceIdFor(plan);
+  if (!priceId) {
+    return NextResponse.json(
+      { error: "料金プランの設定が完了していません。運営にお問い合わせください" },
+      { status: 500 },
+    );
+  }
+
   const appUrl = getAppUrl();
   const trial = await isTrialEligible(dbUser.id);
 
@@ -69,10 +79,10 @@ export async function POST() {
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${appUrl}/dashboard?checkout=success`,
     cancel_url: `${appUrl}/pricing?checkout=cancelled`,
-    metadata: { userId: dbUser.id },
+    metadata: { userId: dbUser.id, plan },
     locale: "ja",
     subscription_data: {
-      metadata: { userId: dbUser.id },
+      metadata: { userId: dbUser.id, plan },
       ...(trial
         ? {
             trial_period_days: TRIAL_DAYS,

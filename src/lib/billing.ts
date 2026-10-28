@@ -2,9 +2,6 @@ import { db } from "@/db";
 import { subscriptions } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
-/** 表示用の料金（実際の請求額は Stripe の Price で決まる）。 */
-export const PRICE_LABEL = process.env.NEXT_PUBLIC_PRICE_LABEL || "月額 ¥2,980（税込）";
-
 /**
  * 新規会員の無料お試し日数。0 = お試しなし（申し込み日から課金）。
  * 将来お試しを付けるときはここを 7 などにすれば、料金ページ・申し込み・

@@ -11,6 +11,7 @@ const registerSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   email: z.string().email(),
   password: z.string().min(8, "パスワードは8文字以上にしてください"),
+  student: z.boolean().optional(),
 });
 
 export async function POST(req: Request) {
@@ -49,9 +50,10 @@ export async function POST(req: Request) {
       email,
       passwordHash,
       status: "pending",
+      student: parsed.data.student ? "requested" : null,
     })
     .returning({ id: users.id, email: users.email });
-  queueAdminSignupNotice({ email, name: parsed.data.name ?? null });
+  queueAdminSignupNotice({ email, name: parsed.data.name ?? null, student: !!parsed.data.student });
   queueWelcomeEmail({ email: created.email, name: parsed.data.name ?? null });
 
   return NextResponse.json({ id: created.id, email: created.email }, { status: 201 });

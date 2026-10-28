@@ -2,7 +2,7 @@ import { after } from "next/server";
 import { isMailConfigured, sendMail } from "@/lib/mailer";
 import { getAppUrl } from "@/lib/url";
 import { isFreeAccessMode } from "@/lib/access";
-import { PRICE_LABEL, TRIAL_DAYS } from "@/lib/billing";
+import { TRIAL_DAYS } from "@/lib/billing";
 
 function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -113,7 +113,7 @@ export function queueApprovedEmail(user: { email: string; name?: string | null }
         "FUKUOKA MEDICAL CONNECT（FMC）の会員登録が承認されました。",
         ...(paid
           ? [
-              `動画講義と資料PDFは、スタンダードプラン（${PRICE_LABEL}）にお申し込みいただくとご覧いただけます。`,
+              `動画講義と資料PDFは、有料プランにお申し込みいただくとご覧いただけます。`,
               ...(TRIAL_DAYS > 0 ? [`はじめての方は${TRIAL_DAYS}日間無料でお試しいただけます。`] : []),
               `■ プランに申し込む　${base}/pricing`,
             ]
@@ -133,7 +133,7 @@ export function queueApprovedEmail(user: { email: string; name?: string | null }
          <p>FUKUOKA MEDICAL CONNECT（FMC）の会員登録が承認されました。<br>
          ${
            paid
-             ? `動画講義と資料PDFは、スタンダードプラン（${PRICE_LABEL}）にお申し込みいただくとご覧いただけます。${
+             ? `動画講義と資料PDFは、有料プランにお申し込みいただくとご覧いただけます。${
                  TRIAL_DAYS > 0 ? `<br><strong>はじめての方は${TRIAL_DAYS}日間無料</strong>でお試しいただけます。` : ""
                }`
              : "ログインすると、会員限定の動画講義と資料PDFをご覧いただけます。"
@@ -151,7 +151,7 @@ export function queueApprovedEmail(user: { email: string; name?: string | null }
 }
 
 /** 新規登録があったことを管理者（ADMIN_EMAILS）に知らせる。 */
-export function queueAdminSignupNotice(user: { email: string; name?: string | null }) {
+export function queueAdminSignupNotice(user: { email: string; name?: string | null; student?: boolean }) {
   const admins = (process.env.ADMIN_EMAILS ?? "")
     .split(",")
     .map((e) => e.trim())
@@ -168,6 +168,7 @@ export function queueAdminSignupNotice(user: { email: string; name?: string | nu
         "新しい会員登録がありました。管理画面から承認してください。",
         "",
         `登録者：${who}`,
+        ...(user.student ? ["学割希望：あり（学生かどうかを確認のうえ、管理画面で学割を承認してください）"] : []),
         "",
         `管理画面：${base}/admin#members`,
       ].join("\n"),
@@ -176,6 +177,7 @@ export function queueAdminSignupNotice(user: { email: string; name?: string | nu
         "新規会員登録の承認依頼",
         `<p>新しい会員登録がありました。管理画面から承認してください。</p>
          <p>登録者：${escapeHtml(who)}</p>
+         ${user.student ? "<p><strong>学割希望：あり</strong>（学生かどうかを確認のうえ、管理画面で学割を承認してください）</p>" : ""}
          ${button(`${base}/admin#members`, "管理画面で確認する")}`,
       ),
     };

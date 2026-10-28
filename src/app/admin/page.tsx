@@ -8,7 +8,7 @@ import { MEMBER_STATUS_LABEL, isMemberStatus, type MemberStatus } from "@/lib/me
 import PdfUploadForm from "./pdf-upload-form";
 import { BODY_PARTS } from "@/data/body-parts";
 import { INSTRUCTORS } from "@/data/instructors";
-import { addEventAction, addVideoAction, deleteEventAction, movePartAction, setMemberStatusAction } from "./actions";
+import { addEventAction, addVideoAction, deleteEventAction, movePartAction, setMemberStatusAction, setStudentAction } from "./actions";
 import { SEMINAR_SLUG, categoryLabel, getPartOrder } from "@/lib/part-order";
 import EventFields from "./event-fields";
 import Link from "next/link";
@@ -26,6 +26,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
   const searchParams = await props.searchParams;
   const videoError = searchParams?.videoError === "1";
   const eventError = searchParams?.eventError === "1";
+  const studentError = searchParams?.studentError === "1";
   const session = await auth();
   if (!session?.user) {
     redirect("/login?callbackUrl=/admin");
@@ -43,6 +44,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
         name: users.name,
         email: users.email,
         status: users.status,
+        student: users.student,
         createdAt: users.createdAt,
       })
       .from(users)
@@ -76,6 +78,14 @@ export default async function AdminPage(props: PageProps<"/admin">) {
             </span>
           )}
         </h2>
+        {studentError && (
+          <p role="alert" className="mt-3 rounded-[4px] border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+            学割の設定は保存しましたが、Stripe側の料金の切り替えに失敗しました。Stripeの料金ID（環境変数）を確認してください。
+          </p>
+        )}
+        <p className="mt-1 text-xs text-muted">
+          学割を承認すると月額 ¥1,980 で申し込めます。契約中の人の学割を外す（卒業など）と、次回更新分から ¥3,980 に切り替わります。
+        </p>
         {pendingMembers.length === 0 ? (
           <p className="mt-3 text-sm text-muted">承認待ちの会員はいません。</p>
         ) : (
@@ -83,12 +93,18 @@ export default async function AdminPage(props: PageProps<"/admin">) {
             {pendingMembers.map((m) => (
               <li key={m.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium">{m.name || "（氏名未入力）"}</p>
+                  <p className="font-medium">
+                    {m.name || "（氏名未入力）"}
+                    <StudentBadge student={m.student} />
+                  </p>
                   <p className="text-xs text-muted">
                     {m.email} / 登録日 {m.createdAt.toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })}
                   </p>
                 </div>
-                <MemberButtons id={m.id} current="pending" />
+                <div className="flex flex-wrap items-center gap-2">
+                  <StudentButtons id={m.id} student={m.student} />
+                  <MemberButtons id={m.id} current="pending" />
+                </div>
               </li>
             ))}
           </ul>
@@ -114,12 +130,16 @@ export default async function AdminPage(props: PageProps<"/admin">) {
                         >
                           {MEMBER_STATUS_LABEL[st]}
                         </span>
+                        <StudentBadge student={m.student} />
                       </p>
                       <p className="text-xs text-muted">
                         {m.email} / 登録日 {m.createdAt.toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })}
                       </p>
                     </div>
-                    <MemberButtons id={m.id} current={st} />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <StudentButtons id={m.id} student={m.student} />
+                      <MemberButtons id={m.id} current={st} />
+                    </div>
                   </li>
                 );
               })}
@@ -398,5 +418,45 @@ function EventAdminRow({ event, badge }: { event: EventRow; badge?: string }) {
         </SubmitButton>
       </form>
     </li>
+  );
+}
+
+function StudentBadge({ student }: { student: string | null }) {
+  if (student === "approved")
+    return <span className="ml-2 rounded-[3px] bg-accent/15 px-1.5 py-0.5 text-[11px] text-accent">学割</span>;
+  if (student === "requested")
+    return <span className="ml-2 rounded-[3px] border border-accent px-1.5 py-0.5 text-[11px] text-accent">学生（申告・未確認）</span>;
+  return null;
+}
+
+function StudentButtons({ id, student }: { id: string; student: string | null }) {
+  const btn = (value: string, label: string, cls: string, confirm?: string) => (
+    <form action={setStudentAction}>
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="value" value={value} />
+      <SubmitButton pendingLabel="処理中…" confirmMessage={confirm} className={`rounded-[4px] px-3 py-1.5 text-xs ${cls}`}>
+        {label}
+      </SubmitButton>
+    </form>
+  );
+  if (student === "requested")
+    return (
+      <>
+        {btn("approved", "学割を承認", "border border-accent text-accent hover:bg-accent hover:text-white")}
+        {btn("none", "学割にしない", "border border-line text-muted hover:text-accent")}
+      </>
+    );
+  if (student === "approved")
+    return btn(
+      "none",
+      "学割を外す",
+      "border border-line text-muted hover:text-accent",
+      "学割を外します。契約中の場合、次回の更新分からスタンダード（¥3,980）に切り替わります。よろしいですか？",
+    );
+  return btn(
+    "approved",
+    "学割にする",
+    "text-muted hover:text-accent",
+    "この会員を学割（¥1,980）にします。契約中の場合、次回の更新分から学割料金に切り替わります。よろしいですか？",
   );
 }

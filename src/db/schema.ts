@@ -14,6 +14,9 @@ export const users = pgTable("users", {
   // approval was introduced keep their access; sign-ups set "pending".
   status: text("status").notNull().default("approved"),
   approvedAt: timestamp("approved_at", { mode: "date" }),
+  // 学割: null = 一般, "requested" = 登録時に学生と申告（運営の確認待ち）,
+  // "approved" = 運営が学生と確認済み（学割価格で申し込める）
+  student: text("student"),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });
 

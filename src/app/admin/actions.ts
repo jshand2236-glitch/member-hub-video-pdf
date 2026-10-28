@@ -1,5 +1,8 @@
 "use server";
 
+import { stripe } from "@/lib/stripe";
+import { priceIdFor } from "@/lib/plans";
+import { getLatestSubscription } from "@/lib/subscription";
 import { parsePublishAt } from "@/lib/publish";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -248,4 +251,43 @@ export async function movePartAction(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/videos");
   revalidatePath("/pdfs");
+}
+
+/**
+ * 学割の承認・解除。契約中の会員は Stripe 側の料金も切り替える
+ * （日割りなし・次回の更新分から新しい料金）。
+ * 学割承認 → 学割プラン ¥1,980 / 学割解除（卒業など）→ スタンダード ¥3,980
+ */
+export async function setStudentAction(formData: FormData) {
+  await assertAdmin();
+  const id = String(formData.get("id") ?? "");
+  const value = String(formData.get("value") ?? "");
+  const student = value === "approved" ? "approved" : null;
+  if (!id) return;
+
+  const [member] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  if (!member) return;
+  await db.update(users).set({ student }).where(eq(users.id, id));
+
+  const sub = await getLatestSubscription(id);
+  if (sub && ["active", "trialing", "past_due"].includes(sub.status)) {
+    const priceId = priceIdFor(student === "approved" ? "student" : "standard");
+    if (priceId) {
+      try {
+        const current = await stripe.subscriptions.retrieve(sub.stripeSubscriptionId);
+        const item = current.items.data[0];
+        if (item && item.price.id !== priceId) {
+          await stripe.subscriptions.update(sub.stripeSubscriptionId, {
+            items: [{ id: item.id, price: priceId }],
+            proration_behavior: "none",
+            metadata: { ...current.metadata, plan: student === "approved" ? "student" : "standard" },
+          });
+        }
+      } catch (err) {
+        console.error("[admin] failed to switch subscription price", err);
+        redirect("/admin?studentError=1#members");
+      }
+    }
+  }
+  revalidatePath("/admin");
 }
