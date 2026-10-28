@@ -30,7 +30,7 @@ export default function ManageBillingButton() {
         disabled={isPending}
         className="rounded-[4px] border border-line px-5 py-2.5 text-sm font-medium hover:bg-soft disabled:opacity-50"
       >
-        {isPending ? "処理中..." : "お支払い管理・解約"}
+        {isPending ? "処理中..." : "お支払い情報・解約"}
       </button>
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
     </div>

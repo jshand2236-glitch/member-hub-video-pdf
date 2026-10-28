@@ -5,11 +5,19 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getAppUrl } from "@/lib/url";
+import { isTrialEligible, TRIAL_DAYS } from "@/lib/billing";
+import { hasActiveSubscription } from "@/lib/subscription";
+import { isApprovedMember } from "@/lib/member-status";
+import { isFreeAccessMode } from "@/lib/access";
 
 export async function POST() {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "ログインが必要です" }, { status: 401 });
+  }
+
+  if (isFreeAccessMode()) {
+    return NextResponse.json({ error: "現在は無料公開中のため、お申し込みは不要です" }, { status: 400 });
   }
 
   const priceId = process.env.STRIPE_PRICE_ID;
@@ -29,7 +37,20 @@ export async function POST() {
     return NextResponse.json({ error: "ユーザーが見つかりません" }, { status: 404 });
   }
 
+  if (!(await isApprovedMember({ id: dbUser.id, email: dbUser.email }))) {
+    return NextResponse.json(
+      { error: "運営による会員登録の承認後にお申し込みいただけます" },
+      { status: 403 },
+    );
+  }
+
+  // 二重契約を防ぐ
+  if (await hasActiveSubscription(dbUser.id)) {
+    return NextResponse.json({ url: `${getAppUrl()}/dashboard` });
+  }
+
   const appUrl = getAppUrl();
+  const trial = await isTrialEligible(dbUser.id);
 
   let customerId = dbUser.stripeCustomerId ?? undefined;
   if (!customerId) {
@@ -49,8 +70,16 @@ export async function POST() {
     success_url: `${appUrl}/dashboard?checkout=success`,
     cancel_url: `${appUrl}/pricing?checkout=cancelled`,
     metadata: { userId: dbUser.id },
+    locale: "ja",
     subscription_data: {
       metadata: { userId: dbUser.id },
+      ...(trial
+        ? {
+            trial_period_days: TRIAL_DAYS,
+            // カードが登録されていなければ、お試し終了時に自動で解約
+            trial_settings: { end_behavior: { missing_payment_method: "cancel" as const } },
+          }
+        : {}),
     },
   });
 

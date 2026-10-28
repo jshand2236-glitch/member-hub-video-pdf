@@ -4,6 +4,7 @@ import Link from "next/link";
 import Nav from "@/components/nav";
 import "./globals.css";
 import Jp from "@/components/jp";
+import { isFreeAccessMode } from "@/lib/access";
 
 export const metadata: Metadata = {
   title: "FUKUOKA MEDICAL CONNECT（FMC）| 会員限定動画・資料",
@@ -40,6 +41,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               </Link>
               <Link href="/pdfs" className="hover:text-accent">
                 資料PDF
+              </Link>
+              {!isFreeAccessMode() && (
+                <Link href="/pricing" className="hover:text-accent">
+                  料金プラン
+                </Link>
+              )}
+              <Link href="/legal/tokushoho" className="hover:text-accent">
+                特定商取引法に基づく表記
               </Link>
             </div>
           </div>

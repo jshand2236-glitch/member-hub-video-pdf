@@ -1,6 +1,8 @@
 import { after } from "next/server";
 import { isMailConfigured, sendMail } from "@/lib/mailer";
 import { getAppUrl } from "@/lib/url";
+import { isFreeAccessMode } from "@/lib/access";
+import { PRICE_LABEL, TRIAL_DAYS } from "@/lib/billing";
 
 function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -100,6 +102,7 @@ export function queueWelcomeEmail(user: { email: string; name?: string | null })
 export function queueApprovedEmail(user: { email: string; name?: string | null }) {
   queueMail("approved-email", () => {
     const base = getAppUrl();
+    const paid = !isFreeAccessMode();
     const greeting = user.name ? `${user.name} 様` : "会員様";
     return {
       to: user.email,
@@ -108,7 +111,13 @@ export function queueApprovedEmail(user: { email: string; name?: string | null }
         greeting,
         "",
         "FUKUOKA MEDICAL CONNECT（FMC）の会員登録が承認されました。",
-        "ログインすると、会員限定の動画講義と資料PDFをご覧いただけます。",
+        ...(paid
+          ? [
+              `動画講義と資料PDFは、スタンダードプラン（${PRICE_LABEL}）にお申し込みいただくとご覧いただけます。`,
+              ...(TRIAL_DAYS > 0 ? [`はじめての方は${TRIAL_DAYS}日間無料でお試しいただけます。`] : []),
+              `■ プランに申し込む　${base}/pricing`,
+            ]
+          : ["ログインすると、会員限定の動画講義と資料PDFをご覧いただけます。"]),
         "",
         `■ ログイン　　　　${base}/login`,
         `■ 会員限定動画　　${base}/videos`,
@@ -122,8 +131,14 @@ export function queueApprovedEmail(user: { email: string; name?: string | null }
         "会員登録が承認されました",
         `<p>${escapeHtml(greeting)}</p>
          <p>FUKUOKA MEDICAL CONNECT（FMC）の会員登録が承認されました。<br>
-         ログインすると、会員限定の動画講義と資料PDFをご覧いただけます。</p>
-         ${button(`${base}/videos`, "動画を見る")}
+         ${
+           paid
+             ? `動画講義と資料PDFは、スタンダードプラン（${PRICE_LABEL}）にお申し込みいただくとご覧いただけます。${
+                 TRIAL_DAYS > 0 ? `<br><strong>はじめての方は${TRIAL_DAYS}日間無料</strong>でお試しいただけます。` : ""
+               }`
+             : "ログインすると、会員限定の動画講義と資料PDFをご覧いただけます。"
+         }</p>
+         ${paid ? button(`${base}/pricing`, "プランに申し込む") : button(`${base}/videos`, "動画を見る")}
          <table style="font-size:14px;border-collapse:collapse">
            <tr><td style="padding:4px 16px 4px 0;color:#6b7383">会員限定動画</td><td><a href="${base}/videos" style="color:#1c2436">${base}/videos</a></td></tr>
            <tr><td style="padding:4px 16px 4px 0;color:#6b7383">資料PDF</td><td><a href="${base}/pdfs" style="color:#1c2436">${base}/pdfs</a></td></tr>

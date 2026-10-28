@@ -7,7 +7,6 @@ import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { signIn } from "@/auth";
 import { AuthError } from "next-auth";
-import { isFreeAccessMode } from "@/lib/access";
 import { queueAdminSignupNotice, queueWelcomeEmail } from "@/lib/welcome-email";
 import { headers } from "next/headers";
 import { LIMITS, clientIp, consume } from "@/lib/rate-limit";
@@ -53,9 +52,9 @@ export async function registerAction(
   queueAdminSignupNotice({ email, name: name || null });
   queueWelcomeEmail({ email, name: name || null });
 
-  // While pricing isn't finalized (FREE_ACCESS_MODE=true), skip the pricing
-  // page and take new members straight to their dashboard/content instead.
-  const postRegisterPath = isFreeAccessMode() ? "/dashboard" : "/pricing";
+  // New sign-ups wait for admin approval first; the dashboard shows that
+  // state (and, once approved, the plan sign-up when billing is on).
+  const postRegisterPath = "/dashboard";
 
   try {
     await signIn("credentials", {
