@@ -60,6 +60,8 @@ export const videos = pgTable("videos", {
   sortOrder: integer("sort_order").notNull().default(0),
   // 予約配信: この日時になるまで会員には表示しない。null = すぐ公開
   publishAt: timestamp("publish_at", { mode: "date" }),
+  // 入会日から数えて何週目に解放するか（1 = 入会日すぐ、2 = 7日後…）。null = 最初から見られる
+  unlockWeek: integer("unlock_week"),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });
 

@@ -15,6 +15,7 @@ import Link from "next/link";
 import { formatEventDate, formatEventTime, getAllEventsNewestFirst, getEventsForAdmin, type EventRow } from "@/lib/events";
 import EventPicker from "./event-picker";
 import PublishAtField from "./publish-at-field";
+import UnlockWeekField from "./unlock-week-field";
 import { PdfAdminList, VideoAdminList } from "./content-lists";
 import SubmitButton from "@/components/submit-button";
 
@@ -320,6 +321,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
             <input name="embedHash" className={inputClass} />
           </div>
           <PublishAtField id="add-video-publishAt" inputClass={inputClass} labelClass={labelClass} />
+          <UnlockWeekField id="add-video-unlockWeek" inputClass={inputClass} labelClass={labelClass} />
           <div className="sm:col-span-2">
             <SubmitButton
               pendingLabel="追加中…"

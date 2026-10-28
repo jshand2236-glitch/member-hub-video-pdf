@@ -11,7 +11,9 @@ import UpcomingEvents from "@/components/upcoming-events";
 import { getUpcomingEvents } from "@/lib/events";
 import { db } from "@/db";
 import { videos } from "@/db/schema";
-import { and, isNotNull, isNull, or } from "drizzle-orm";
+import { and, asc, gt, isNotNull, isNull, or } from "drizzle-orm";
+import { formatUnlockDate, getMemberStart, lockState } from "@/lib/drip";
+import { isAdminEmail } from "@/lib/admin";
 
 export const metadata = {
   title: "マイページ | FMC",
@@ -36,19 +38,35 @@ export default async function DashboardPage() {
 
   const freeAccess = isFreeAccessMode();
 
-  const [active, subscription, approved, memberStatus, upcomingEvents, seminarVideos] = await Promise.all([
+  const [active, subscription, approved, memberStatus, upcomingEvents, seminarVideos, stepVideos] = await Promise.all([
     hasActiveSubscription(session.user.id),
     getLatestSubscription(session.user.id),
     isApprovedMember(session.user),
     getMemberStatus(session.user.id),
     getUpcomingEvents(4),
     db.select({ id: videos.id }).from(videos).where(and(or(isNotNull(videos.eventId), isNull(videos.bodyPart)), isPublishedSql(videos.publishAt))),
+    db
+      .select({ id: videos.id, title: videos.title, unlockWeek: videos.unlockWeek })
+      .from(videos)
+      .where(and(gt(videos.unlockWeek, 1), isPublishedSql(videos.publishAt)))
+      .orderBy(asc(videos.unlockWeek)),
   ]);
 
   // In free access mode, any logged-in member can view videos/PDFs -
   // subscription status is informational only (or not shown at all yet,
   // since there's nothing to subscribe to).
   const canViewContent = approved && (freeAccess || active);
+
+  // ステップ配信：次に解放される動画
+  const memberStart =
+    canViewContent && stepVideos.length > 0 && !isAdminEmail(session.user.email)
+      ? await getMemberStart(session.user.id)
+      : null;
+  const nextUnlock = memberStart
+    ? stepVideos
+        .map((v) => ({ v, lock: lockState(v.unlockWeek, memberStart) }))
+        .find((x) => x.lock.locked)
+    : undefined;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
@@ -65,6 +83,19 @@ export default async function DashboardPage() {
       )}
 
       <UpcomingEvents events={upcomingEvents} />
+
+      {nextUnlock && nextUnlock.lock.locked && (
+        <div className="mt-8 flex items-center gap-4 rounded-[4px] border border-accent/40 bg-accent/5 p-5">
+          <span className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-full bg-accent text-white">
+            <span className="font-sans text-base font-bold leading-none">{nextUnlock.lock.daysLeft}</span>
+            <span className="text-[9px] leading-none">日後</span>
+          </span>
+          <div className="min-w-0">
+            <p className="text-xs text-muted">次に見られるようになる動画（{formatUnlockDate(nextUnlock.lock.unlocksAt)}）</p>
+            <p className="mt-0.5 font-medium leading-snug">{nextUnlock.v.title}</p>
+          </div>
+        </div>
+      )}
 
       {approved && !freeAccess && (
         <div className="mt-8 rounded-[4px] border border-line p-6">

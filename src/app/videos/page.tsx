@@ -10,6 +10,8 @@ import { findInstructor } from "@/data/instructors";
 import { findBodyPart } from "@/data/body-parts";
 import { SEMINAR_SLUG, getPartOrder, orderedBodyParts } from "@/lib/part-order";
 import FilterChip from "@/components/filter-chip";
+import { isAdminEmail } from "@/lib/admin";
+import { formatUnlockDate, getMemberStart, lockState, type Lock } from "@/lib/drip";
 
 export const metadata = {
   title: "会員限定動画 | FMC",
@@ -34,10 +36,36 @@ function thumbnailFor(video: Video) {
   return null;
 }
 
-function VideoCard({ video, showPart }: { video: Video; showPart: boolean }) {
+function VideoCard({ video, showPart, lock }: { video: Video; showPart: boolean; lock: Lock }) {
   const thumb = thumbnailFor(video);
   const part = findBodyPart(video.bodyPart);
   const instructor = video.instructorName ? findInstructor(video.instructorName) : undefined;
+
+  if (lock.locked) {
+    // ステップ配信でまだ解放されていない動画：タイトルだけ見せて期待感を出す
+    return (
+      <div className="flex flex-col overflow-hidden rounded-[4px] border border-line bg-background" aria-disabled="true">
+        <div className="relative aspect-video w-full overflow-hidden bg-navy-deep">
+          {thumb && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={thumb} alt="" className="h-full w-full scale-105 object-cover opacity-30 blur-[3px]" />
+          )}
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-white">
+            <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+              <rect x="5" y="11" width="14" height="9" rx="1.5" />
+              <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+            </svg>
+            <span className="font-sans text-sm font-semibold">あと{lock.daysLeft}日で公開</span>
+            <span className="font-sans text-[11px] text-white/70">{formatUnlockDate(lock.unlocksAt)} 公開予定</span>
+          </div>
+        </div>
+        <div className="flex flex-1 flex-col p-4">
+          <h3 className="font-medium leading-snug text-muted">{video.title}</h3>
+          {video.instructorName && <p className="mt-auto pt-4 text-xs text-muted">{video.instructorName}</p>}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Link
@@ -81,7 +109,7 @@ function VideoCard({ video, showPart }: { video: Video; showPart: boolean }) {
 
 export default async function VideosPage(props: PageProps<"/videos">) {
   // Access check and data load run in parallel to save a database round trip.
-  const [, allVideos, allEvents, partOrder, searchParams] = await Promise.all([
+  const [session, allVideos, allEvents, partOrder, searchParams] = await Promise.all([
     requireActiveSubscriber("/videos"),
     db.select().from(videos).where(isPublishedSql(videos.publishAt)).orderBy(asc(videos.sortOrder), asc(videos.createdAt)),
     db.select().from(events).orderBy(desc(events.eventDate)),
@@ -89,6 +117,11 @@ export default async function VideosPage(props: PageProps<"/videos">) {
     props.searchParams,
   ]);
   const partParam = Array.isArray(searchParams?.part) ? searchParams.part[0] : searchParams?.part;
+  const isAdmin = isAdminEmail(session.user?.email);
+  const memberStart = allVideos.some((v) => v.unlockWeek && v.unlockWeek > 1) && !isAdmin
+    ? await getMemberStart(session.user!.id!)
+    : null;
+  const lockOf = (v: Video) => lockState(v.unlockWeek, memberStart, { isAdmin });
 
   // オフラインセミナー: recordings from 医療者交流会 (linked to a meetup) and
   // any video without a body part. Grouped by meetup, newest first.
@@ -183,7 +216,7 @@ export default async function VideosPage(props: PageProps<"/videos">) {
                         </h3>
                         <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                           {sg.videos.map((video) => (
-                            <VideoCard key={video.id} video={video} showPart={false} />
+                            <VideoCard key={video.id} video={video} showPart={false} lock={lockOf(video)} />
                           ))}
                         </div>
                       </div>
@@ -192,7 +225,7 @@ export default async function VideosPage(props: PageProps<"/videos">) {
                 ) : (
                   <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     {g.videos.map((video) => (
-                      <VideoCard key={video.id} video={video} showPart={false} />
+                      <VideoCard key={video.id} video={video} showPart={false} lock={lockOf(video)} />
                     ))}
                   </div>
                 )}

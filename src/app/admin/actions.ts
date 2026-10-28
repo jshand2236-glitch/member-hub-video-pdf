@@ -32,6 +32,11 @@ async function eventExists(id: string) {
 }
 
 /** Reads the video form fields shared by the add and edit forms. */
+function parseUnlockWeek(raw: FormDataEntryValue | null): number | null {
+  const n = Number(String(raw ?? "").trim());
+  return Number.isInteger(n) && n >= 2 && n <= 104 ? n : null; // 1 や空欄は「最初から」
+}
+
 function readVideoForm(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim().slice(0, 200);
   const description = String(formData.get("description") ?? "").trim().slice(0, 2000);
@@ -55,6 +60,7 @@ function readVideoForm(formData: FormData) {
     embedHash: parsed.provider === "vimeo" ? embedHashRaw || parsed.hash || null : null,
     eventId: eventIdRaw || null,
     publishAt: parsePublishAt(formData.get("publishAt")),
+    unlockWeek: parseUnlockWeek(formData.get("unlockWeek")),
   };
 }
 

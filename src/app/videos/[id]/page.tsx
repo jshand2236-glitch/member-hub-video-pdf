@@ -7,6 +7,7 @@ import { formatEventDate } from "@/lib/events";
 import { eq } from "drizzle-orm";
 import { findBodyPart } from "@/data/body-parts";
 import { isAdminEmail } from "@/lib/admin";
+import { formatUnlockDate, getMemberStart, lockState } from "@/lib/drip";
 import { formatPublishAt, isPublished } from "@/lib/publish";
 
 function buildEmbedUrl(video: typeof videos.$inferSelect): string {
@@ -31,6 +32,12 @@ export default async function VideoDetailPage(props: PageProps<"/videos/[id]">) 
     notFound();
   }
   const scheduled = !isPublished(video.publishAt);
+  // ステップ配信：入会日から数えた解放日まではプレーヤーを出さない
+  const lock = lockState(
+    video.unlockWeek,
+    !isAdmin && video.unlockWeek && video.unlockWeek > 1 ? await getMemberStart(session.user!.id!) : null,
+    { isAdmin },
+  );
 
   const embedUrl = buildEmbedUrl(video);
   const part = findBodyPart(video.bodyPart);
@@ -78,15 +85,31 @@ export default async function VideoDetailPage(props: PageProps<"/videos/[id]">) 
         <p className="mt-2 text-sm text-muted">{video.description}</p>
       )}
 
-      <div className="mt-6 aspect-video w-full overflow-hidden rounded-[4px] bg-black">
-        <iframe
-          src={embedUrl}
-          title={video.title}
-          className="h-full w-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowFullScreen
-        />
-      </div>
+      {lock.locked ? (
+        <div className="mt-6 flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-[4px] bg-navy-deep px-6 text-center text-white">
+          <svg viewBox="0 0 24 24" className="h-9 w-9" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+            <rect x="5" y="11" width="14" height="9" rx="1.5" />
+            <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+          </svg>
+          <p className="font-sans text-lg font-semibold">あと{lock.daysLeft}日で公開</p>
+          <p className="text-sm text-white/75">
+            この動画は入会から{video.unlockWeek}週目（{formatUnlockDate(lock.unlocksAt)}）に見られるようになります。
+          </p>
+        </div>
+      ) : (
+        <div className="mt-6 aspect-video w-full overflow-hidden rounded-[4px] bg-black">
+          <iframe
+            src={embedUrl}
+            title={video.title}
+            className="h-full w-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        </div>
+      )}
+      {isAdmin && video.unlockWeek && video.unlockWeek > 1 && (
+        <p className="mt-3 text-xs text-muted">ステップ配信：会員には入会{video.unlockWeek}週目に解放されます（管理者は常に視聴できます）。</p>
+      )}
     </div>
   );
 }
