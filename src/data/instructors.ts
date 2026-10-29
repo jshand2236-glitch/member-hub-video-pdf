@@ -87,6 +87,7 @@ export const INSTRUCTORS: Instructor[] = [
 
 /** 動画の instructorName (自由入力・前後空白あり得る) から一致するプロフィールを探す */
 export function findInstructor(name: string): Instructor | undefined {
-  const trimmed = name.trim();
-  return INSTRUCTORS.find((i) => i.name === trimmed);
+  // 「安良田卓也」「安良田　卓也」のような空白の違いは同じ講師として扱う
+  const key = name.replace(/[\s　]/g, "");
+  return INSTRUCTORS.find((i) => i.name.replace(/[\s　]/g, "") === key);
 }

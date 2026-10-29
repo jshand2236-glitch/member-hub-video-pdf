@@ -12,12 +12,14 @@ export default function RegisterForm() {
     <form action={formAction} className="mt-8 space-y-4">
       <div>
         <label htmlFor="name" className="block text-sm font-medium">
-          お名前（任意）
+          お名前
         </label>
         <input
           id="name"
           name="name"
           type="text"
+          required
+          maxLength={100}
           autoComplete="name"
           className="mt-1 w-full rounded-[4px] border border-line bg-transparent px-3 py-2 text-sm outline-none focus:border-accent"
         />

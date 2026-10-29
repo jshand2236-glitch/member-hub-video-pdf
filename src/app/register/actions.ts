@@ -26,6 +26,12 @@ export async function registerAction(
   const password = String(formData.get("password") ?? "");
   const student = formData.get("student") ? "requested" : null;
 
+  if (!name) {
+    return { error: "お名前を入力してください" };
+  }
+  if (name.length > 100) {
+    return { error: "お名前は100文字以内で入力してください" };
+  }
   if (!email || !email.includes("@")) {
     return { error: "有効なメールアドレスを入力してください" };
   }
@@ -45,7 +51,7 @@ export async function registerAction(
 
   const passwordHash = await bcrypt.hash(password, 12);
   await db.insert(users).values({
-    name: name || null,
+    name,
     email,
     passwordHash,
     status: "pending",

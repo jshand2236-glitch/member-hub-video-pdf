@@ -6,7 +6,7 @@ import { requireActiveSubscriber } from "@/lib/require-subscriber";
 import { db } from "@/db";
 import { events, videos } from "@/db/schema";
 import { formatEventDate } from "@/lib/events";
-import { findInstructor } from "@/data/instructors";
+import { INSTRUCTORS, findInstructor } from "@/data/instructors";
 import { findBodyPart } from "@/data/body-parts";
 import { SEMINAR_SLUG, getPartOrder, orderedBodyParts } from "@/lib/part-order";
 import FilterChip from "@/components/filter-chip";
@@ -116,7 +116,23 @@ export default async function VideosPage(props: PageProps<"/videos">) {
     getPartOrder(),
     props.searchParams,
   ]);
-  const partParam = Array.isArray(searchParams?.part) ? searchParams.part[0] : searchParams?.part;
+  const pick = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+  const partParam = pick(searchParams?.part);
+  // 講師で絞り込み（?instructor=slug）。部位の絞り込みと組み合わせられる
+  const instructorOf = (v: Video) => (v.instructorName ? findInstructor(v.instructorName) : undefined);
+  const instructors = INSTRUCTORS.map((i) => ({
+    ...i,
+    count: allVideos.filter((v) => instructorOf(v)?.slug === i.slug).length,
+  })).filter((i) => i.count > 0);
+  const instructor = instructors.find((i) => i.slug === pick(searchParams?.instructor));
+  const pool = instructor ? allVideos.filter((v) => instructorOf(v)?.slug === instructor.slug) : allVideos;
+  const qs = (part?: string, inst?: string) => {
+    const p = new URLSearchParams();
+    if (part) p.set("part", part);
+    if (inst) p.set("instructor", inst);
+    const q = p.toString();
+    return q ? `/videos?${q}` : "/videos";
+  };
   const isAdmin = isAdminEmail(session.user?.email);
   const memberStart = allVideos.some((v) => v.unlockWeek && v.unlockWeek > 1) && !isAdmin
     ? await getMemberStart(session.user!.id!)
@@ -125,7 +141,7 @@ export default async function VideosPage(props: PageProps<"/videos">) {
 
   // オフラインセミナー: recordings from 医療者交流会 (linked to a meetup) and
   // any video without a body part. Grouped by meetup, newest first.
-  const seminarVideos = allVideos.filter((v) => v.eventId || !findBodyPart(v.bodyPart));
+  const seminarVideos = pool.filter((v) => v.eventId || !findBodyPart(v.bodyPart));
   const eventSubgroups = allEvents
     .map((e) => ({
       key: e.id,
@@ -149,7 +165,7 @@ export default async function VideosPage(props: PageProps<"/videos">) {
   // Then by body part, in the order chosen in /admin (セミナー included).
   const partGroups: Group[] = orderedBodyParts(partOrder).map((p) => ({
     ...p,
-    videos: allVideos.filter((v) => v.bodyPart === p.slug),
+    videos: pool.filter((v) => v.bodyPart === p.slug),
   }));
   const groups: Group[] = partOrder
     .map((slug) => (slug === ARCHIVE_SLUG ? archive : partGroups.find((g) => g.slug === slug)))
@@ -163,25 +179,75 @@ export default async function VideosPage(props: PageProps<"/videos">) {
       <span className="eyebrow">Video</span>
       <h1 className="mt-2 font-serif text-2xl font-semibold sm:text-3xl">会員限定動画</h1>
       <p className="mt-3 text-sm text-muted">
-        部位を選ぶと、その部位の動画だけを表示します。医療者交流会で収録したセミナー動画は「オフラインセミナー」にあります。
+        講師や部位を選ぶと、その動画だけを表示します。医療者交流会で収録したセミナー動画は「オフラインセミナー」にあります。
       </p>
 
       {allVideos.length === 0 ? (
         <p className="mt-10 text-sm text-muted">まだ動画が登録されていません。</p>
       ) : (
         <>
-          <nav aria-label="部位で絞り込み" className="mt-8 flex flex-wrap gap-2">
-            <FilterChip href="/videos" active={!selected} label="すべて" count={allVideos.length} />
-            {groups.map((g) => (
-              <FilterChip
-                key={g.slug}
-                href={`/videos?part=${g.slug}`}
-                active={selected?.slug === g.slug}
-                label={g.label}
-                count={g.videos.length}
-              />
-            ))}
+          {instructors.length > 0 && (
+            <nav aria-label="講師で絞り込み" className="mt-8">
+              <p className="eyebrow">Instructor</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <FilterChip href={qs(selected?.slug)} active={!instructor} label="すべての講師" />
+                {instructors.map((i) => (
+                  <Link
+                    key={i.slug}
+                    href={qs(selected?.slug, i.slug)}
+                    scroll={false}
+                    aria-current={instructor?.slug === i.slug ? "page" : undefined}
+                    className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border py-1 pl-1 pr-4 text-sm transition ${
+                      instructor?.slug === i.slug
+                        ? "border-navy bg-navy text-white"
+                        : "border-line bg-background hover:border-accent hover:text-accent"
+                    }`}
+                  >
+                    <span className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full bg-soft">
+                      <Image src={i.avatar} alt="" fill sizes="28px" className="object-cover" />
+                    </span>
+                    {i.name}
+                    <span className={instructor?.slug === i.slug ? "text-white/70" : "text-muted"}>{i.count}</span>
+                  </Link>
+                ))}
+              </div>
+            </nav>
+          )}
+
+          {instructor && (
+            <div className="mt-6 flex items-center gap-4 rounded-[4px] border border-line bg-soft p-4">
+              <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full bg-background">
+                <Image src={instructor.avatar} alt="" fill sizes="56px" className="object-cover" />
+              </span>
+              <div className="min-w-0">
+                <p className="font-serif text-lg font-semibold">{instructor.name}</p>
+                <p className="text-xs text-muted">
+                  {[instructor.title, instructor.specialty && `専門：${instructor.specialty}`].filter(Boolean).join("　")}
+                </p>
+                <Link href={`/instructors#${instructor.slug}`} className="mt-1 inline-block text-xs text-accent hover:underline">
+                  プロフィールを見る →
+                </Link>
+              </div>
+            </div>
+          )}
+
+          <nav aria-label="部位で絞り込み" className="mt-8">
+            <p className="eyebrow">Body part</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <FilterChip href={qs(undefined, instructor?.slug)} active={!selected} label="すべて" count={pool.length} />
+              {groups.map((g) => (
+                <FilterChip
+                  key={g.slug}
+                  href={qs(g.slug, instructor?.slug)}
+                  active={selected?.slug === g.slug}
+                  label={g.label}
+                  count={g.videos.length}
+                />
+              ))}
+            </div>
           </nav>
+
+          {pool.length === 0 && <p className="mt-10 text-sm text-muted">この講師の動画はまだありません。</p>}
 
           <div className="mt-12 space-y-16">
             {visibleGroups.map((g) => (
@@ -198,7 +264,7 @@ export default async function VideosPage(props: PageProps<"/videos">) {
                   </div>
                   {!selected && groups.length > 1 && (
                     <Link
-                      href={`/videos?part=${g.slug}`}
+                      href={qs(g.slug, instructor?.slug)}
                       className="shrink-0 font-sans text-xs tracking-[0.12em] text-accent hover:underline"
                     >
                       {g.slug === ARCHIVE_SLUG ? "セミナーだけ見る" : "この部位だけ見る"} →

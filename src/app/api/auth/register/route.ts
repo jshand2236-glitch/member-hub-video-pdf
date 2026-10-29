@@ -8,7 +8,7 @@ import { queueAdminSignupNotice, queueWelcomeEmail } from "@/lib/welcome-email";
 import { LIMITS, clientIp, consume } from "@/lib/rate-limit";
 
 const registerSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
+  name: z.string().trim().min(1, "お名前を入力してください").max(100),
   email: z.string().email(),
   password: z.string().min(8, "パスワードは8文字以上にしてください"),
   student: z.boolean().optional(),

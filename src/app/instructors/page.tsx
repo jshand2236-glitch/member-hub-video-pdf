@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { INSTRUCTORS } from "@/data/instructors";
 import Jp from "@/components/jp";
 
@@ -62,6 +63,13 @@ export default function InstructorsPage() {
                   </p>
 
                   <p className="mt-5 text-sm leading-loose text-muted"><Jp>{instructor.bio}</Jp></p>
+
+                  <Link
+                    href={`/videos?instructor=${instructor.slug}`}
+                    className="mt-4 inline-flex items-center gap-1 font-sans text-xs tracking-[0.12em] text-accent hover:underline"
+                  >
+                    {instructor.name.split(" ")[0]}先生の動画を見る →
+                  </Link>
 
                   <div className="mt-6">
                     <h3 className="eyebrow">Career</h3>
