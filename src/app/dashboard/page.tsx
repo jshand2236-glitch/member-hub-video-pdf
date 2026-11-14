@@ -2,8 +2,8 @@ import { isPublishedSql } from "@/lib/publish";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { getLatestSubscription, hasActiveSubscription } from "@/lib/subscription";
-import { isFreeAccessMode } from "@/lib/access";
+import { getLatestSubscription, hasActiveSubscription, isStaffOrAdmin } from "@/lib/subscription";
+import { isFreeAccessMode, paidStartLabel } from "@/lib/access";
 import ManageBillingButton from "./manage-billing-button";
 import { getMemberStatus, isApprovedMember } from "@/lib/member-status";
 import MemberStatusNotice from "@/components/member-status-notice";
@@ -11,8 +11,8 @@ import UpcomingEvents from "@/components/upcoming-events";
 import { getUpcomingEvents } from "@/lib/events";
 import { db } from "@/db";
 import { videos } from "@/db/schema";
-import { and, asc, gt, isNotNull, isNull, or } from "drizzle-orm";
-import { formatUnlockDate, getMemberStart, lockState } from "@/lib/drip";
+import { and, asc, eq, gt, isNotNull, isNull, or } from "drizzle-orm";
+import { formatUnlockDate, getMemberStart, lockState, memberProgress } from "@/lib/drip";
 import { isAdminEmail } from "@/lib/admin";
 
 export const metadata = {
@@ -38,7 +38,8 @@ export default async function DashboardPage() {
 
   const freeAccess = isFreeAccessMode();
 
-  const [active, subscription, approved, memberStatus, upcomingEvents, seminarVideos, stepVideos] = await Promise.all([
+  const [staff, active, subscription, approved, memberStatus, upcomingEvents, seminarVideos, stepVideos] = await Promise.all([
+    isStaffOrAdmin(session.user.id),
     hasActiveSubscription(session.user.id),
     getLatestSubscription(session.user.id),
     isApprovedMember(session.user),
@@ -48,7 +49,7 @@ export default async function DashboardPage() {
     db
       .select({ id: videos.id, title: videos.title, unlockWeek: videos.unlockWeek })
       .from(videos)
-      .where(and(gt(videos.unlockWeek, 1), isPublishedSql(videos.publishAt)))
+      .where(and(gt(videos.unlockWeek, 1), eq(videos.isFree, false), isPublishedSql(videos.publishAt)))
       .orderBy(asc(videos.unlockWeek)),
   ]);
 
@@ -56,13 +57,13 @@ export default async function DashboardPage() {
   // subscription status is informational only (or not shown at all yet,
   // since there's nothing to subscribe to).
   const canViewContent = approved && (freeAccess || active);
+  // 運営メンバー（Stripeの契約なし）は、申し込みボタン類を出さない
+  const staffOnly = staff && !(subscription && ["active", "trialing", "past_due"].includes(subscription.status));
 
   // ステップ配信：次に解放される動画
-  const memberStart =
-    canViewContent && stepVideos.length > 0 && !isAdminEmail(session.user.email)
-      ? await getMemberStart(session.user.id)
-      : null;
-  const nextUnlock = memberStart
+  const memberStart = approved ? await getMemberStart(session.user.id) : null;
+  const progress = memberStart ? memberProgress(memberStart) : null;
+  const nextUnlock = memberStart && canViewContent && stepVideos.length > 0 && !isAdminEmail(session.user.email)
     ? stepVideos
         .map((v) => ({ v, lock: lockState(v.unlockWeek, memberStart) }))
         .find((x) => x.lock.locked)
@@ -76,9 +77,42 @@ export default async function DashboardPage() {
         {session.user.email}
       </p>
 
+      {progress && (
+        <div className="mt-8 grid grid-cols-2 overflow-hidden rounded-[4px] border border-line text-center">
+          <div className="border-r border-line px-4 py-5">
+            <p className="text-xs text-muted">入会して</p>
+            <p className="mt-1 font-serif text-3xl font-semibold">
+              {progress.day}
+              <span className="ml-1 font-sans text-sm font-normal text-muted">日目</span>
+            </p>
+          </div>
+          <div className="px-4 py-5">
+            <p className="text-xs text-muted">いま</p>
+            <p className="mt-1 font-serif text-3xl font-semibold text-accent">
+              <span className="mr-1 font-sans text-sm font-normal text-muted">第</span>
+              {progress.week}
+              <span className="ml-1 font-sans text-sm font-normal text-muted">週</span>
+            </p>
+          </div>
+          <p className="col-span-2 border-t border-line bg-soft px-4 py-2 text-xs text-muted">入会日 {progress.since}</p>
+        </div>
+      )}
+
       {!approved && (
         <div className="mt-8">
           <MemberStatusNotice status={memberStatus} />
+        </div>
+      )}
+
+      {approved && freeAccess && !staff && (
+        <div className="mt-8 rounded-[4px] border border-accent/50 bg-accent/5 p-5 text-sm">
+          <p className="font-semibold">{`${paidStartLabel()}から有料プランが始まります`}</p>
+          <p className="mt-1 leading-relaxed text-muted">
+            それまでは無料でご利用いただけます。開始日以降も動画・資料をご覧いただくには、料金プランへのお申し込みが必要です。
+          </p>
+          <Link href="/pricing" className="mt-2 inline-block text-accent hover:underline">
+            料金プランを見る →
+          </Link>
         </div>
       )}
 
@@ -100,7 +134,12 @@ export default async function DashboardPage() {
       {approved && !freeAccess && (
         <div className="mt-8 rounded-[4px] border border-line p-6">
           <h2 className="text-lg font-semibold">会員ステータス</h2>
-          {subscription ? (
+          {staffOnly ? (
+            <p className="mt-3 text-sm">
+              <span className="font-medium">運営メンバー</span>
+              <span className="text-muted">（有料プランへのお申し込みは不要です）</span>
+            </p>
+          ) : subscription ? (
             <div className="mt-3 space-y-1 text-sm">
               <p>
                 状態:{" "}
@@ -122,7 +161,7 @@ export default async function DashboardPage() {
             </p>
           )}
 
-          <div className="mt-5 flex flex-wrap gap-3">
+          <div className={`mt-5 flex flex-wrap gap-3 ${staffOnly ? "hidden" : ""}`}>
             {active ? (
               <ManageBillingButton />
             ) : (

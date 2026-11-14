@@ -1,29 +1,134 @@
 import Link from "next/link";
 import RegisterForm from "./register-form";
-import { isFreeAccessMode } from "@/lib/access";
+import Jp from "@/components/jp";
+import { isFreeAccessMode, paidStartLabel } from "@/lib/access";
+import { PLANS, yen } from "@/lib/plans";
+import { hasEarlyOfferCookie } from "@/lib/offer";
 
 export const metadata = {
   title: "会員登録 | FMC",
 };
 
-export default function RegisterPage() {
+const MERITS = [
+  { title: "動画講義が見放題", body: "現役の医療者3名が、臨床で使える技術と考え方を配信" },
+  { title: "資料PDFが読み放題", body: "講義資料やまとめノートを、部位ごとにいつでも確認" },
+  { title: "交流会のアーカイブ", body: "医療者交流会の講義を、参加できなかった回も視聴" },
+];
+
+export default async function RegisterPage(props: PageProps<"/register">) {
+  const sp = await props.searchParams;
+  const studentDefault = sp?.student === "1";
   const freeAccess = isFreeAccessMode();
+  const early = await hasEarlyOfferCookie();
+
+  const steps = [
+    { title: "会員登録", body: "このページから。1分ほどで終わります。" },
+    { title: "運営が確認", body: "医療従事者限定のため、運営がご登録内容を確認します。" },
+    freeAccess
+      ? { title: "利用開始", body: "承認のメールが届いたら、すべての動画と資料をご覧いただけます。" }
+      : { title: "プランに申し込み", body: "承認のメールが届いたら、料金プランを選んで利用開始です。" },
+  ];
 
   return (
-    <div className="mx-auto max-w-md px-4 py-16 sm:px-6">
-      <h1 className="font-serif text-2xl font-semibold">会員登録</h1>
-      <p className="mt-2 text-sm text-muted">
-        {freeAccess
-          ? "登録後すぐに、会員限定の動画・PDF資料をご覧いただけます。"
-          : "登録後、料金プランのお申し込み画面に進みます。"}
-      </p>
-      <RegisterForm />
-      <p className="mt-6 text-center text-sm text-muted">
-        すでに会員の方は{" "}
-        <Link href="/login" className="underline">
-          ログイン
-        </Link>
-      </p>
+    <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16">
+      <div className="grid gap-8 md:grid-cols-[1fr_minmax(0,26rem)] md:gap-x-14 md:gap-y-0">
+        {/* 見出し（スマホではこの直後にフォーム） */}
+        <div className="md:col-start-1 md:row-start-1">
+          <span className="eyebrow">Join FMC</span>
+          <h1 className="mt-2 font-serif text-2xl font-semibold sm:text-3xl">
+            {studentDefault ? "会員登録（学割）" : "会員登録"}
+          </h1>
+          <p className="mt-3 text-sm leading-relaxed text-muted">
+            <Jp>福岡の医療者が学び続けるための会員制サイトです。</Jp>
+          </p>
+          {early && (
+            <p className="mt-5 rounded-[4px] border border-accent bg-accent/10 px-4 py-3 text-sm">
+              <span className="font-semibold">{`${PLANS.early.name}（月額 ${yen(PLANS.early.amount)}）`}</span>
+              <span className="mt-1 block text-xs leading-relaxed text-muted">
+                <Jp>交流会の限定ご案内からのご登録です。このまま登録すると、解約するまでずっとこの料金でお申し込みいただけます。</Jp>
+              </span>
+            </p>
+          )}
+        </div>
+
+        {/* フォーム */}
+        <div className="md:col-start-2 md:row-span-2 md:row-start-1 md:pt-2">
+          <div className="rounded-[4px] border border-line bg-background p-5 sm:p-7">
+            <RegisterForm studentDefault={studentDefault} />
+          </div>
+          <p className="mt-6 text-center text-sm text-muted">
+            すでに会員の方は{" "}
+            <Link href="/login" className="underline">
+              ログイン
+            </Link>
+          </p>
+        </div>
+
+        {/* 案内 */}
+        <div className="md:col-start-1 md:row-start-2 md:pt-8">
+
+          <ul className="space-y-4">
+            {MERITS.map((m) => (
+              <li key={m.title} className="flex gap-3">
+                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden="true" />
+                <div>
+                  <p className="text-sm font-medium">{m.title}</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-muted">
+                    <Jp>{m.body}</Jp>
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-8 rounded-[4px] border border-line bg-soft px-4 py-3 text-sm">
+            {freeAccess ? (
+              <p>
+                <span className="font-medium">いまは無料でご利用いただけます。</span>
+                <span className="mt-1 block text-xs leading-relaxed text-muted">
+                  <Jp>{`${paidStartLabel()}から有料プラン（月額 ${yen(PLANS[early ? "early" : "standard"].amount)}・学割 ${yen(PLANS.student.amount)}）が始まります。お申し込みいただくまで料金はかかりません。`}</Jp>
+                </span>
+              </p>
+            ) : (
+              <p>
+                <span className="font-medium">{`月額 ${yen(PLANS[early ? "early" : "standard"].amount)}（学割 ${yen(PLANS.student.amount)}）`}</span>
+                <span className="mt-1 block text-xs leading-relaxed text-muted">
+                  <Jp>会員登録は無料です。料金は承認後にプランをお申し込みいただいた時点から発生し、いつでも解約できます。</Jp>
+                </span>
+              </p>
+            )}
+          </div>
+
+          <h2 className="mt-10 text-sm font-semibold">登録から利用開始まで</h2>
+          <ol className="mt-4 space-y-4">
+            {steps.map((s, i) => (
+              <li key={s.title} className="flex gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent font-sans text-xs text-white">
+                  {i + 1}
+                </span>
+                <div>
+                  <p className="text-sm font-medium">{s.title}</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-muted">
+                    <Jp>{s.body}</Jp>
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+            <Link href="/free" className="text-accent hover:underline">
+              無料動画を見てみる →
+            </Link>
+            {!studentDefault && (
+              <Link href="/student" className="text-accent hover:underline">
+                学生の方へ →
+              </Link>
+            )}
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 }

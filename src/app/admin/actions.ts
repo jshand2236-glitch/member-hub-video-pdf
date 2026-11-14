@@ -61,6 +61,8 @@ function readVideoForm(formData: FormData) {
     eventId: eventIdRaw || null,
     publishAt: parsePublishAt(formData.get("publishAt")),
     unlockWeek: parseUnlockWeek(formData.get("unlockWeek")),
+    isFree: formData.get("isFree") === "on",
+    premiumOnly: formData.get("premiumOnly") === "on",
   };
 }
 
@@ -73,6 +75,8 @@ export async function addVideoAction(formData: FormData) {
   await db.insert(videos).values({ ...values, sortOrder: await nextVideoSortOrder(values.bodyPart) });
   revalidatePath("/admin");
   revalidatePath("/videos");
+  revalidatePath("/free");
+  revalidatePath("/");
 }
 
 export async function updateVideoAction(formData: FormData) {
@@ -90,6 +94,8 @@ export async function updateVideoAction(formData: FormData) {
   await db.update(videos).set({ ...values, sortOrder }).where(eq(videos.id, id));
   revalidatePath("/admin");
   revalidatePath("/videos");
+  revalidatePath("/free");
+  revalidatePath("/");
   revalidatePath(`/videos/${id}`);
   redirect(`/admin/videos/${id}?saved=1`);
 }
@@ -101,6 +107,8 @@ export async function deleteVideoAction(formData: FormData) {
   await db.delete(videos).where(eq(videos.id, id));
   revalidatePath("/admin");
   revalidatePath("/videos");
+  revalidatePath("/free");
+  revalidatePath("/");
 }
 
 export async function updatePdfAction(formData: FormData) {
@@ -186,6 +194,8 @@ export async function moveVideoAction(formData: FormData) {
   await moveVideo(id, dir);
   revalidatePath("/admin");
   revalidatePath("/videos");
+  revalidatePath("/free");
+  revalidatePath("/");
 }
 
 export async function movePdfAction(formData: FormData) {
@@ -256,6 +266,8 @@ export async function movePartAction(formData: FormData) {
   await movePart(slug, dir);
   revalidatePath("/admin");
   revalidatePath("/videos");
+  revalidatePath("/free");
+  revalidatePath("/");
   revalidatePath("/pdfs");
 }
 
@@ -282,7 +294,8 @@ export async function setStudentAction(formData: FormData) {
       try {
         const current = await stripe.subscriptions.retrieve(sub.stripeSubscriptionId);
         const item = current.items.data[0];
-        if (item && item.price.id !== priceId) {
+        // プレミアムプランの人は学割の有無で料金を変えない
+        if (item && item.price.id !== priceId && item.price.id !== priceIdFor("premium")) {
           await stripe.subscriptions.update(sub.stripeSubscriptionId, {
             items: [{ id: item.id, price: priceId }],
             proration_behavior: "none",
@@ -295,5 +308,24 @@ export async function setStudentAction(formData: FormData) {
       }
     }
   }
+  revalidatePath("/admin");
+}
+
+/** 当日入会料金（¥2,980）の付け外し。限定URLを使わずに入会した交流会参加者などに。 */
+export async function setOfferAction(formData: FormData) {
+  await assertAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  const offer = formData.get("value") === "early" ? "early" : null;
+  await db.update(users).set({ offer }).where(eq(users.id, id));
+  revalidatePath("/admin");
+}
+
+/** 運営メンバー（有料プランなしで全部見られる）の付け外し。 */
+export async function setStaffAction(formData: FormData) {
+  await assertAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  await db.update(users).set({ staff: formData.get("value") === "on" }).where(eq(users.id, id));
   revalidatePath("/admin");
 }

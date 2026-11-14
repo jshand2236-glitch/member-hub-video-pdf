@@ -151,7 +151,7 @@ export function queueApprovedEmail(user: { email: string; name?: string | null }
 }
 
 /** 新規登録があったことを管理者（ADMIN_EMAILS）に知らせる。 */
-export function queueAdminSignupNotice(user: { email: string; name?: string | null; student?: boolean }) {
+export function queueAdminSignupNotice(user: { email: string; name?: string | null; student?: boolean; school?: string | null }) {
   const admins = (process.env.ADMIN_EMAILS ?? "")
     .split(",")
     .map((e) => e.trim())
@@ -169,6 +169,7 @@ export function queueAdminSignupNotice(user: { email: string; name?: string | nu
         "",
         `登録者：${who}`,
         ...(user.student ? ["学割希望：あり（学生かどうかを確認のうえ、管理画面で学割を承認してください）"] : []),
+        ...(user.student && user.school ? [`学校名・学年：${user.school}`] : []),
         "",
         `管理画面：${base}/admin#members`,
       ].join("\n"),
@@ -178,6 +179,41 @@ export function queueAdminSignupNotice(user: { email: string; name?: string | nu
         `<p>新しい会員登録がありました。管理画面から承認してください。</p>
          <p>登録者：${escapeHtml(who)}</p>
          ${user.student ? "<p><strong>学割希望：あり</strong>（学生かどうかを確認のうえ、管理画面で学割を承認してください）</p>" : ""}
+         ${user.student && user.school ? `<p>学校名・学年：${escapeHtml(user.school)}</p>` : ""}
+         ${button(`${base}/admin#members`, "管理画面で確認する")}`,
+      ),
+    };
+  });
+}
+
+/** 登録済みの会員が、あとから学割を申請したときの運営向け通知。 */
+export function queueAdminStudentRequestNotice(user: { email: string; name?: string | null; school?: string | null }) {
+  const admins = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim())
+    .filter(Boolean);
+  if (admins.length === 0) return;
+
+  queueMail("admin-student-request", () => {
+    const base = getAppUrl();
+    const who = user.name ? `${user.name}（${user.email}）` : user.email;
+    return {
+      to: admins.join(","),
+      subject: "【FMC管理】学割の申請がありました",
+      text: [
+        "会員から学割の申請がありました。学生かどうかを確認のうえ、管理画面で学割を承認してください。",
+        "",
+        `申請者：${who}`,
+        ...(user.school ? [`学校名・学年：${user.school}`] : []),
+        "",
+        `管理画面：${base}/admin#members`,
+      ].join("\n"),
+      html: wrapHtml(
+        "ADMIN",
+        "学割の申請がありました",
+        `<p>会員から学割の申請がありました。学生かどうかを確認のうえ、管理画面で学割を承認してください。</p>
+         <p>申請者：${escapeHtml(who)}</p>
+         ${user.school ? `<p>学校名・学年：${escapeHtml(user.school)}</p>` : ""}
          ${button(`${base}/admin#members`, "管理画面で確認する")}`,
       ),
     };

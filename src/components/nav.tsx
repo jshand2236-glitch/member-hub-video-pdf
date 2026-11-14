@@ -68,6 +68,9 @@ export default async function Nav() {
             </>
           ) : (
             <>
+              <Link href="/free" className="hover:text-accent">
+                無料動画
+              </Link>
               <Link href="/login" className="hover:text-accent">
                 ログイン
               </Link>

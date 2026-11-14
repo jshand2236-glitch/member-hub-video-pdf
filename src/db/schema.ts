@@ -17,6 +17,10 @@ export const users = pgTable("users", {
   // 学割: null = 一般, "requested" = 登録時に学生と申告（運営の確認待ち）,
   // "approved" = 運営が学生と確認済み（学割価格で申し込める）
   student: text("student"),
+  // 限定URLから登録した人の特別料金（"early" = 交流会当日入会 ¥2,980）。null = なし
+  offer: text("offer"),
+  // 運営メンバー：有料プランに申し込まなくても、すべて（プレミアム限定も）見られる
+  staff: boolean("staff").notNull().default(false),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });
 
@@ -62,6 +66,10 @@ export const videos = pgTable("videos", {
   publishAt: timestamp("publish_at", { mode: "date" }),
   // 入会日から数えて何週目に解放するか（1 = 入会日すぐ、2 = 7日後…）。null = 最初から見られる
   unlockWeek: integer("unlock_week"),
+  // 無料公開：会員登録していない人も含めて誰でも見られる（/free とトップページに表示）
+  isFree: boolean("is_free").notNull().default(false),
+  // プレミアム限定：プレミアムプランの会員（と管理者）だけが見られる。無料公開が優先
+  premiumOnly: boolean("premium_only").notNull().default(false),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });
 

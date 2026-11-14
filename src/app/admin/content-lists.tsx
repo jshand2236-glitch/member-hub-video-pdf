@@ -91,6 +91,8 @@ function Row({
   meta,
   publishAt,
   unlockWeek,
+  isFree,
+  premiumOnly,
   editHref,
   editLabel,
   moveAction,
@@ -103,6 +105,8 @@ function Row({
   meta: string;
   publishAt: Date | null;
   unlockWeek?: number | null;
+  isFree?: boolean;
+  premiumOnly?: boolean;
   editHref: string;
   editLabel: string;
   moveAction: (formData: FormData) => Promise<void>;
@@ -120,7 +124,17 @@ function Row({
               予約 {formatPublishAt(publishAt)} 公開
             </span>
           )}
-          {unlockWeek && unlockWeek > 1 && (
+          {premiumOnly && !isFree && (
+            <span className="mr-2 inline-block rounded-full bg-navy-deep px-2 py-0.5 align-middle font-sans text-[11px] font-medium text-white">
+              プレミアム限定
+            </span>
+          )}
+          {isFree && (
+            <span className="mr-2 inline-block rounded-full bg-emerald-50 px-2 py-0.5 align-middle font-sans text-[11px] font-medium text-emerald-700">
+              無料公開
+            </span>
+          )}
+          {!isFree && unlockWeek && unlockWeek > 1 && (
             <span className="mr-2 inline-block rounded-full border border-accent px-2 py-0.5 align-middle font-sans text-[11px] text-accent">
               入会{unlockWeek}週目
             </span>
@@ -185,6 +199,8 @@ export function VideoAdminList({ videos, events, order }: { videos: Video[]; eve
                     .join(" / ")}
                   publishAt={v.publishAt}
                   unlockWeek={v.unlockWeek}
+                  isFree={v.isFree}
+                  premiumOnly={v.premiumOnly}
                   editHref={`/admin/videos/${v.id}`}
                   editLabel="編集"
                   moveAction={moveVideoAction}

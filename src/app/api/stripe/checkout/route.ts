@@ -9,9 +9,14 @@ import { isTrialEligible, TRIAL_DAYS } from "@/lib/billing";
 import { hasActiveSubscription } from "@/lib/subscription";
 import { isApprovedMember } from "@/lib/member-status";
 import { isFreeAccessMode } from "@/lib/access";
-import { planFor, priceIdFor } from "@/lib/plans";
+import { EARLY_OFFER, planFor, priceIdFor, type PlanKey } from "@/lib/plans";
+import { hasEarlyOfferCookie } from "@/lib/offer";
 
-export async function POST() {
+export async function POST(req: Request) {
+  // tier: "basic"（その人の基本料金）または "premium"
+  const body = (await req.json().catch(() => null)) as { tier?: string } | null;
+  const premium = body?.tier === "premium";
+
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "ログインが必要です" }, { status: 401 });
@@ -42,7 +47,7 @@ export async function POST() {
     return NextResponse.json({ url: `${getAppUrl()}/dashboard` });
   }
 
-  if (dbUser.student === "requested") {
+  if (!premium && dbUser.student === "requested") {
     return NextResponse.json(
       { error: "学割の確認中です。運営の確認後にお申し込みいただけます" },
       { status: 403 },
@@ -50,7 +55,12 @@ export async function POST() {
   }
 
   // 学割 → 交流会当日 → 一般 の順に価格を決める（サーバー側で判定）
-  const plan = planFor(dbUser);
+  // 限定URLを開いたあとにログインした人も当日入会料金にする
+  if (!dbUser.offer && (await hasEarlyOfferCookie())) {
+    await db.update(users).set({ offer: EARLY_OFFER }).where(eq(users.id, dbUser.id));
+    dbUser.offer = EARLY_OFFER;
+  }
+  const plan: PlanKey = premium ? "premium" : planFor(dbUser);
   const priceId = priceIdFor(plan);
   if (!priceId) {
     return NextResponse.json(

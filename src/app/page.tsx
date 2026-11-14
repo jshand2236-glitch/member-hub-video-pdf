@@ -4,8 +4,11 @@ import HeroVideo from "@/components/hero-video";
 import Jp from "@/components/jp";
 import { auth } from "@/auth";
 import { hasActiveSubscription } from "@/lib/subscription";
-import { isFreeAccessMode } from "@/lib/access";
+import { isFreeAccessMode, paidStartLabel } from "@/lib/access";
 import { INSTRUCTORS } from "@/data/instructors";
+import FreeVideoCard from "@/components/free-video-card";
+import PriceTable from "@/components/price-table";
+import { getFreeVideos } from "@/lib/free-videos";
 
 export default async function Home() {
   const session = await auth();
@@ -14,6 +17,7 @@ export default async function Home() {
   const isSubscribed =
     !freeAccess && session?.user?.id ? await hasActiveSubscription(session.user.id) : false;
   const canViewContent = freeAccess || isSubscribed;
+  const freeVideos = await getFreeVideos(3);
 
   const primaryHref = session?.user
     ? canViewContent
@@ -116,6 +120,31 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* 無料動画 */}
+      {freeVideos.length > 0 && (
+        <section className="bg-background">
+          <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6 sm:py-24">
+            <span className="eyebrow">Free videos</span>
+            <h2 className="mt-4 font-serif text-2xl font-semibold sm:text-3xl">
+              <Jp>まずは無料で、講義を体験。</Jp>
+            </h2>
+            <p className="mt-4 max-w-2xl text-sm leading-loose text-muted">
+              <Jp>会員登録なしで見られる動画を公開しています。</Jp>
+            </p>
+            <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {freeVideos.map((v) => (
+                <FreeVideoCard key={v.id} video={v} />
+              ))}
+            </div>
+            <div className="mt-10">
+              <Link href="/free" className="font-sans text-xs tracking-[0.18em] text-accent hover:underline">
+                無料動画をすべて見る →
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* コンセプト */}
       <section className="bg-background">
         <div className="mx-auto max-w-3xl px-4 py-20 text-center sm:px-6 sm:py-24">
@@ -181,6 +210,31 @@ export default async function Home() {
               className="font-sans text-xs tracking-[0.18em] text-accent hover:underline"
             >
               講師紹介を見る →
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* 料金プラン */}
+      <section className="bg-soft">
+        <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6 sm:py-24">
+          <span className="eyebrow">Plan</span>
+          <h2 className="mt-4 font-serif text-2xl font-semibold sm:text-3xl">
+            <Jp>料金プラン</Jp>
+          </h2>
+          <p className="mt-4 max-w-2xl text-sm leading-loose text-muted">
+            <Jp>
+              {freeAccess
+                ? `現在は会員登録だけで無料でご利用いただけます。${paidStartLabel()}から、次の料金プランに切り替わります。`
+                : "基本プランですべての動画講義と資料PDFを、プレミアムプランではさらに限定動画もご覧いただけます。"}
+            </Jp>
+          </p>
+          <div className="mt-10">
+            <PriceTable action={session?.user ? () => (<Link href="/pricing" className="btn btn-outline w-full !px-4">料金プランのページへ</Link>) : undefined} />
+          </div>
+          <div className="mt-10">
+            <Link href="/pricing" className="font-sans text-xs tracking-[0.18em] text-accent hover:underline">
+              決済のしくみ・解約について →
             </Link>
           </div>
         </div>

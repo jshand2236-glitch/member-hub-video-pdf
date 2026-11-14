@@ -1,6 +1,6 @@
 import { SELLER } from "@/data/legal";
 import { TRIAL_DAYS } from "@/lib/billing";
-import { PLANS, earlyBirdDate, formatJpDate, yen } from "@/lib/plans";
+import { PLANS, yen } from "@/lib/plans";
 import Jp from "@/components/jp";
 
 export const metadata = {
@@ -18,7 +18,7 @@ export default function TokushohoPage() {
     ["サービス名", "FUKUOKA MEDICAL CONNECT MEMBERS（会員制動画・資料配信サービス）"],
     [
       "販売価格（月額・税込）",
-      `${PLANS.standard.name} ${yen(PLANS.standard.amount)}／${PLANS.early.name}（${formatJpDate(earlyBirdDate())}の医療者交流会当日にお申し込みの方）${yen(PLANS.early.amount)}／${PLANS.student.name}（在学中の学生の方・運営による確認後）${yen(PLANS.student.amount)}`,
+      `${PLANS.standard.name} ${yen(PLANS.standard.amount)}／${PLANS.premium.name} ${yen(PLANS.premium.amount)}／${PLANS.early.name}（医療者交流会の限定ご案内からお申し込みの方）${yen(PLANS.early.amount)}／${PLANS.student.name}（医療系の学校に在学中の方・運営による確認後）${yen(PLANS.student.amount)}`,
     ],
     ["商品代金以外の必要料金", "インターネット接続にかかる通信料はお客様のご負担となります。"],
     ["お支払い方法", "クレジットカード決済（Stripe）"],

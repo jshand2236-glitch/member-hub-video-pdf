@@ -9,6 +9,7 @@ import { findBodyPart } from "@/data/body-parts";
 import { isAdminEmail } from "@/lib/admin";
 import { formatUnlockDate, getMemberStart, lockState } from "@/lib/drip";
 import { formatPublishAt, isPublished } from "@/lib/publish";
+import { hasPremiumAccess, isPremiumLocked } from "@/lib/premium";
 
 function buildEmbedUrl(video: typeof videos.$inferSelect): string {
   if (video.provider === "youtube") {
@@ -33,12 +34,16 @@ export default async function VideoDetailPage(props: PageProps<"/videos/[id]">) 
   }
   const scheduled = !isPublished(video.publishAt);
   // ステップ配信：入会日から数えた解放日まではプレーヤーを出さない
+  const unlockWeek = video.isFree ? null : video.unlockWeek; // 無料公開の動画はステップ配信しない
   const lock = lockState(
-    video.unlockWeek,
-    !isAdmin && video.unlockWeek && video.unlockWeek > 1 ? await getMemberStart(session.user!.id!) : null,
+    unlockWeek,
+    !isAdmin && unlockWeek && unlockWeek > 1 ? await getMemberStart(session.user!.id!) : null,
     { isAdmin },
   );
 
+  const premiumLocked = video.premiumOnly
+    ? isPremiumLocked(video, await hasPremiumAccess(session.user as { id: string; email?: string | null }))
+    : false;
   const embedUrl = buildEmbedUrl(video);
   const part = findBodyPart(video.bodyPart);
   const [event] = video.eventId
@@ -85,7 +90,16 @@ export default async function VideoDetailPage(props: PageProps<"/videos/[id]">) 
         <p className="mt-2 text-sm text-muted">{video.description}</p>
       )}
 
-      {lock.locked ? (
+      {premiumLocked ? (
+        <div className="mt-6 flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-[4px] bg-navy-deep px-6 text-center text-white">
+          <span className="rounded-full border border-accent px-3 py-0.5 font-sans text-xs tracking-wider text-accent">PREMIUM</span>
+          <p className="font-sans text-lg font-semibold">プレミアムプラン限定の動画です</p>
+          <p className="text-sm text-white/75">プレミアムプランにお申し込みいただくと、ご覧いただけます。</p>
+          <Link href="/pricing" className="mt-2 rounded-[4px] bg-accent px-5 py-2 text-sm text-white hover:bg-accent-hover">
+            プランを見る
+          </Link>
+        </div>
+      ) : lock.locked ? (
         <div className="mt-6 flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-[4px] bg-navy-deep px-6 text-center text-white">
           <svg viewBox="0 0 24 24" className="h-9 w-9" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
             <rect x="5" y="11" width="14" height="9" rx="1.5" />

@@ -12,6 +12,7 @@ import { SEMINAR_SLUG, getPartOrder, orderedBodyParts } from "@/lib/part-order";
 import FilterChip from "@/components/filter-chip";
 import { isAdminEmail } from "@/lib/admin";
 import { formatUnlockDate, getMemberStart, lockState, type Lock } from "@/lib/drip";
+import { hasPremiumAccess, isPremiumLocked } from "@/lib/premium";
 
 export const metadata = {
   title: "会員限定動画 | FMC",
@@ -36,20 +37,49 @@ function thumbnailFor(video: Video) {
   return null;
 }
 
-function VideoCard({ video, showPart, lock }: { video: Video; showPart: boolean; lock: Lock }) {
-  const thumb = thumbnailFor(video);
+function VideoCard({
+  video,
+  showPart,
+  lock,
+  premiumLocked = false,
+}: {
+  video: Video;
+  showPart: boolean;
+  lock: Lock;
+  premiumLocked?: boolean;
+}) {
+  const thumb = lock.locked || premiumLocked ? null : thumbnailFor(video);
   const part = findBodyPart(video.bodyPart);
   const instructor = video.instructorName ? findInstructor(video.instructorName) : undefined;
+
+  if (premiumLocked) {
+    // プレミアム限定：タイトルだけ見せて、料金ページへ案内する
+    return (
+      <Link
+        href="/pricing"
+        className="group flex flex-col overflow-hidden rounded-[4px] border border-line bg-background transition hover:border-accent"
+      >
+        <div className="relative flex aspect-video w-full flex-col items-center justify-center gap-2 bg-navy-deep text-white">
+          <span className="rounded-full border border-accent px-3 py-0.5 font-sans text-[11px] tracking-wider text-accent">
+            PREMIUM
+          </span>
+          <span className="font-sans text-sm font-semibold">プレミアムプラン限定</span>
+          <span className="font-sans text-[11px] text-white/70 group-hover:underline">プランを見る →</span>
+        </div>
+        <div className="flex flex-1 flex-col p-4">
+          <h3 className="font-medium leading-snug text-muted">{video.title}</h3>
+          {video.instructorName && <p className="mt-auto pt-4 text-xs text-muted">{video.instructorName}</p>}
+        </div>
+      </Link>
+    );
+  }
 
   if (lock.locked) {
     // ステップ配信でまだ解放されていない動画：タイトルだけ見せて期待感を出す
     return (
       <div className="flex flex-col overflow-hidden rounded-[4px] border border-line bg-background" aria-disabled="true">
         <div className="relative aspect-video w-full overflow-hidden bg-navy-deep">
-          {thumb && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={thumb} alt="" className="h-full w-full scale-105 object-cover opacity-30 blur-[3px]" />
-          )}
+          {/* サムネイルのURLには YouTube の動画IDが入るため、解放前は出さない（IDから直接再生されるのを防ぐ） */}
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-white">
             <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
               <rect x="5" y="11" width="14" height="9" rx="1.5" />
@@ -137,7 +167,9 @@ export default async function VideosPage(props: PageProps<"/videos">) {
   const memberStart = allVideos.some((v) => v.unlockWeek && v.unlockWeek > 1) && !isAdmin
     ? await getMemberStart(session.user!.id!)
     : null;
-  const lockOf = (v: Video) => lockState(v.unlockWeek, memberStart, { isAdmin });
+  const lockOf = (v: Video) => lockState(v.isFree ? null : v.unlockWeek, memberStart, { isAdmin });
+  const premium = allVideos.some((v) => v.premiumOnly) ? await hasPremiumAccess(session.user as { id: string; email?: string | null }) : false;
+  const premiumLockOf = (v: Video) => isPremiumLocked(v, premium);
 
   // オフラインセミナー: recordings from 医療者交流会 (linked to a meetup) and
   // any video without a body part. Grouped by meetup, newest first.
@@ -282,7 +314,7 @@ export default async function VideosPage(props: PageProps<"/videos">) {
                         </h3>
                         <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                           {sg.videos.map((video) => (
-                            <VideoCard key={video.id} video={video} showPart={false} lock={lockOf(video)} />
+                            <VideoCard key={video.id} video={video} showPart={false} lock={lockOf(video)} premiumLocked={premiumLockOf(video)} />
                           ))}
                         </div>
                       </div>
@@ -291,7 +323,7 @@ export default async function VideosPage(props: PageProps<"/videos">) {
                 ) : (
                   <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     {g.videos.map((video) => (
-                      <VideoCard key={video.id} video={video} showPart={false} lock={lockOf(video)} />
+                      <VideoCard key={video.id} video={video} showPart={false} lock={lockOf(video)} premiumLocked={premiumLockOf(video)} />
                     ))}
                   </div>
                 )}

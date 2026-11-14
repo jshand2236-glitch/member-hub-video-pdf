@@ -67,8 +67,8 @@ export const INSTRUCTORS: Instructor[] = [
   },
   {
     slug: "miyagi-norihisa",
-    photo: "/instructors/miyagi.jpg",
-    avatar: "/instructors/miyagi-face.jpg",
+    photo: "/instructors/miyagi-2.jpg",
+    avatar: "/instructors/miyagi-2-face.jpg",
     name: "宮城 徳久",
     nameReading: "MIYAGI NORIHISA",
     title: "鍼灸整体院サロンMiN 代表",

@@ -59,3 +59,16 @@ export function formatUnlockDate(d: Date): string {
   const j = new Date(d.getTime() + JST);
   return `${j.getUTCMonth() + 1}/${j.getUTCDate()}(${WD[j.getUTCDay()]})`;
 }
+
+/** 入会何日目・何週目か（入会日＝1日目・第1週。日本時間の日付で数える）。 */
+export function memberProgress(start: Date, now = new Date()): { day: number; week: number; since: string } {
+  const startDay = Math.floor((start.getTime() + JST) / DAY);
+  const today = Math.floor((now.getTime() + JST) / DAY);
+  const day = Math.max(1, today - startDay + 1);
+  const s = new Date(startDay * DAY);
+  return {
+    day,
+    week: Math.floor((day - 1) / 7) + 1,
+    since: `${s.getUTCFullYear()}年${s.getUTCMonth() + 1}月${s.getUTCDate()}日`,
+  };
+}

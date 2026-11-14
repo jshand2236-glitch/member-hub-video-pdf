@@ -2,13 +2,13 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { isAdminEmail } from "@/lib/admin";
 import { db } from "@/db";
-import { videos, pdfDocuments, users } from "@/db/schema";
+import { videos, pdfDocuments, users, subscriptions } from "@/db/schema";
 import { asc, desc } from "drizzle-orm";
 import { MEMBER_STATUS_LABEL, isMemberStatus, type MemberStatus } from "@/lib/member-status";
 import PdfUploadForm from "./pdf-upload-form";
 import { BODY_PARTS } from "@/data/body-parts";
 import { INSTRUCTORS } from "@/data/instructors";
-import { addEventAction, addVideoAction, deleteEventAction, movePartAction, setMemberStatusAction, setStudentAction } from "./actions";
+import { addEventAction, addVideoAction, deleteEventAction, movePartAction, setMemberStatusAction, setOfferAction, setStaffAction, setStudentAction } from "./actions";
 import { SEMINAR_SLUG, categoryLabel, getPartOrder } from "@/lib/part-order";
 import EventFields from "./event-fields";
 import Link from "next/link";
@@ -16,8 +16,12 @@ import { formatEventDate, formatEventTime, getAllEventsNewestFirst, getEventsFor
 import EventPicker from "./event-picker";
 import PublishAtField from "./publish-at-field";
 import UnlockWeekField from "./unlock-week-field";
+import FreeField from "./free-field";
+import PremiumField from "./premium-field";
+import { getAppUrl } from "@/lib/url";
 import { PdfAdminList, VideoAdminList } from "./content-lists";
 import SubmitButton from "@/components/submit-button";
+import { PLANS, earlyJoinCode, priceIdFor, yen, type PlanKey } from "@/lib/plans";
 
 export const metadata = {
   title: "管理画面 | FMC",
@@ -28,6 +32,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
   const videoError = searchParams?.videoError === "1";
   const eventError = searchParams?.eventError === "1";
   const studentError = searchParams?.studentError === "1";
+  const subFilter = typeof searchParams?.sub === "string" ? searchParams.sub : "";
   const session = await auth();
   if (!session?.user) {
     redirect("/login?callbackUrl=/admin");
@@ -36,7 +41,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
     redirect("/dashboard");
   }
 
-  const [allVideos, allPdfs, allMembers, eventLists, allEvents, partOrder] = await Promise.all([
+  const [allVideos, allPdfs, allMembers, eventLists, allEvents, partOrder, allSubs] = await Promise.all([
     db.select().from(videos).orderBy(asc(videos.sortOrder), asc(videos.createdAt)),
     db.select().from(pdfDocuments).orderBy(asc(pdfDocuments.sortOrder), asc(pdfDocuments.createdAt)),
     db
@@ -46,6 +51,8 @@ export default async function AdminPage(props: PageProps<"/admin">) {
         email: users.email,
         status: users.status,
         student: users.student,
+        offer: users.offer,
+        staff: users.staff,
         createdAt: users.createdAt,
       })
       .from(users)
@@ -53,10 +60,27 @@ export default async function AdminPage(props: PageProps<"/admin">) {
     getEventsForAdmin(),
     getAllEventsNewestFirst(),
     getPartOrder(),
+    db
+      .select({
+        userId: subscriptions.userId,
+        status: subscriptions.status,
+        stripePriceId: subscriptions.stripePriceId,
+        currentPeriodEnd: subscriptions.currentPeriodEnd,
+        cancelAtPeriodEnd: subscriptions.cancelAtPeriodEnd,
+      })
+      .from(subscriptions)
+      .orderBy(desc(subscriptions.updatedAt)),
   ]);
+  // 会員ごとの最新の契約（Stripe の Webhook で自動更新される）
+  const subOf = new Map<string, SubInfo>();
+  for (const s of allSubs) if (!subOf.has(s.userId)) subOf.set(s.userId, s);
+  const subCounts: Record<SubKind, number> = { active: 0, canceling: 0, trouble: 0, ended: 0, none: 0 };
+  for (const m of allMembers) subCounts[subKind(subOf.get(m.id))]++;
   const statusOf = (s: string): MemberStatus => (isMemberStatus(s) ? s : "pending");
   const pendingMembers = allMembers.filter((m) => statusOf(m.status) === "pending");
-  const otherMembers = allMembers.filter((m) => statusOf(m.status) !== "pending");
+  const otherMembers = allMembers
+    .filter((m) => statusOf(m.status) !== "pending")
+    .filter((m) => !subFilter || subKind(subOf.get(m.id)) === subFilter);
 
   const inputClass =
     "mt-1 w-full rounded-[4px] border border-line bg-transparent px-3 py-2 text-sm outline-none focus:border-accent";
@@ -87,6 +111,21 @@ export default async function AdminPage(props: PageProps<"/admin">) {
         <p className="mt-1 text-xs text-muted">
           学割を承認すると月額 ¥1,980 で申し込めます。契約中の人の学割を外す（卒業など）と、次回更新分から ¥3,980 に切り替わります。
         </p>
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-muted">契約状況：</span>
+          {(Object.keys(SUB_LABEL) as SubKind[]).map((k) => (
+            <Link
+              key={k}
+              href={subFilter === k ? "/admin#members" : `/admin?sub=${k}#members`}
+              scroll={false}
+              className={`rounded-full border px-3 py-1 ${
+                subFilter === k ? "border-navy bg-navy text-white" : `border-line ${SUB_LABEL[k].cls} hover:border-accent`
+              }`}
+            >
+              {SUB_LABEL[k].label} {subCounts[k]}
+            </Link>
+          ))}
+        </div>
         {pendingMembers.length === 0 ? (
           <p className="mt-3 text-sm text-muted">承認待ちの会員はいません。</p>
         ) : (
@@ -97,6 +136,8 @@ export default async function AdminPage(props: PageProps<"/admin">) {
                   <p className="font-medium">
                     {m.name || "（氏名未入力）"}
                     <StudentBadge student={m.student} />
+                    {m.offer === "early" && <OfferBadge />}
+                    {m.staff && <StaffBadge />}
                   </p>
                   <p className="text-xs text-muted">
                     {m.email} / 登録日 {m.createdAt.toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })}
@@ -104,6 +145,8 @@ export default async function AdminPage(props: PageProps<"/admin">) {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <StudentButtons id={m.id} student={m.student} />
+                  <OfferButton id={m.id} offer={m.offer} />
+                  <StaffButton id={m.id} staff={m.staff} />
                   <MemberButtons id={m.id} current="pending" />
                 </div>
               </li>
@@ -112,9 +155,9 @@ export default async function AdminPage(props: PageProps<"/admin">) {
         )}
 
         {otherMembers.length > 0 && (
-          <details className="mt-6">
+          <details className="mt-6" open={!!subFilter}>
             <summary className="cursor-pointer text-sm text-muted hover:text-accent">
-              登録済みの会員一覧（{otherMembers.length}名）
+              登録済みの会員一覧（{otherMembers.length}名{subFilter ? `・${SUB_LABEL[subFilter as SubKind]?.label ?? ""}のみ` : ""}）
             </summary>
             <ul className="mt-3 divide-y divide-line">
               {otherMembers.map((m) => {
@@ -132,13 +175,19 @@ export default async function AdminPage(props: PageProps<"/admin">) {
                           {MEMBER_STATUS_LABEL[st]}
                         </span>
                         <StudentBadge student={m.student} />
+                    {m.offer === "early" && <OfferBadge />}
+                    {m.staff && <StaffBadge />}
+                        <SubBadge sub={subOf.get(m.id)} />
                       </p>
                       <p className="text-xs text-muted">
                         {m.email} / 登録日 {m.createdAt.toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })}
+                        <SubDetail sub={subOf.get(m.id)} />
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <StudentButtons id={m.id} student={m.student} />
+                  <OfferButton id={m.id} offer={m.offer} />
+                  <StaffButton id={m.id} staff={m.staff} />
                       <MemberButtons id={m.id} current={st} />
                     </div>
                   </li>
@@ -147,6 +196,26 @@ export default async function AdminPage(props: PageProps<"/admin">) {
             </ul>
           </details>
         )}
+      </section>
+
+      {/* 当日入会の限定URL */}
+      <section id="early-url" className="mt-12 scroll-mt-24">
+        <h2 className="text-lg font-semibold">交流会当日入会の限定URL</h2>
+        <p className="mt-1 text-sm text-muted">
+          このURL（またはQRコード）から登録した人は、{PLANS.early.name}（月額 {yen(PLANS.early.amount)}）で申し込めます。料金表には表示されません。期限はありません。
+        </p>
+        {earlyJoinCode() ? (
+          <p className="mt-3 break-all rounded-[4px] border border-line bg-soft px-4 py-3 font-mono text-sm">
+            {`${getAppUrl()}/join/${earlyJoinCode()}`}
+          </p>
+        ) : (
+          <p className="mt-3 rounded-[4px] border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+            まだ使えません。Netlifyの環境変数 EARLY_JOIN_CODE に、推測されにくい英数字（6文字以上）を設定してください。
+          </p>
+        )}
+        <p className="mt-2 text-xs text-muted">
+          URLを使わずに入会した参加者には、会員一覧の「当日料金にする」で同じ料金を付けられます（申し込み前の人のみ反映）。
+        </p>
       </section>
 
       {/* 医療者交流会 */}
@@ -322,6 +391,8 @@ export default async function AdminPage(props: PageProps<"/admin">) {
           </div>
           <PublishAtField id="add-video-publishAt" inputClass={inputClass} labelClass={labelClass} />
           <UnlockWeekField id="add-video-unlockWeek" inputClass={inputClass} labelClass={labelClass} />
+          <PremiumField labelClass={labelClass} />
+          <FreeField labelClass={labelClass} />
           <div className="sm:col-span-2">
             <SubmitButton
               pendingLabel="追加中…"
@@ -460,5 +531,109 @@ function StudentButtons({ id, student }: { id: string; student: string | null })
     "学割にする",
     "text-muted hover:text-accent",
     "この会員を学割（¥1,980）にします。契約中の場合、次回の更新分から学割料金に切り替わります。よろしいですか？",
+  );
+}
+
+type SubInfo = {
+  status: string;
+  stripePriceId: string | null;
+  currentPeriodEnd: Date | null;
+  cancelAtPeriodEnd: boolean;
+};
+type SubKind = "active" | "canceling" | "trouble" | "ended" | "none";
+const SUB_LABEL: Record<SubKind, { label: string; cls: string }> = {
+  active: { label: "契約中", cls: "text-accent" },
+  canceling: { label: "解約予定", cls: "text-amber-700" },
+  trouble: { label: "支払いエラー", cls: "text-red-700" },
+  ended: { label: "解約済み", cls: "text-muted" },
+  none: { label: "未契約", cls: "text-muted" },
+};
+function subKind(s: SubInfo | undefined): SubKind {
+  if (!s) return "none";
+  if (s.status === "active" || s.status === "trialing") return s.cancelAtPeriodEnd ? "canceling" : "active";
+  if (s.status === "past_due" || s.status === "unpaid" || s.status === "incomplete") return "trouble";
+  return "ended";
+}
+function planOf(priceId: string | null): PlanKey | null {
+  if (!priceId) return null;
+  return (["premium", "student", "early", "standard"] as PlanKey[]).find((k) => priceIdFor(k) === priceId) ?? null;
+}
+const jpDate = (d: Date) => d.toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" });
+
+function SubBadge({ sub }: { sub: SubInfo | undefined }) {
+  const k = subKind(sub);
+  if (k === "none") return null;
+  const tone =
+    k === "active"
+      ? "bg-accent/15 text-accent"
+      : k === "canceling"
+        ? "bg-amber-50 text-amber-800"
+        : k === "trouble"
+          ? "bg-red-50 text-red-700"
+          : "bg-soft text-muted";
+  return <span className={`ml-2 rounded-[3px] px-1.5 py-0.5 text-[11px] ${tone}`}>{SUB_LABEL[k].label}</span>;
+}
+
+function SubDetail({ sub }: { sub: SubInfo | undefined }) {
+  const k = subKind(sub);
+  if (!sub || k === "none") return null;
+  const plan = planOf(sub.stripePriceId);
+  const parts = [plan ? `${PLANS[plan].name}` : null];
+  if (sub.currentPeriodEnd) {
+    if (k === "active") parts.push(`次回更新 ${jpDate(sub.currentPeriodEnd)}`);
+    if (k === "canceling") parts.push(`${jpDate(sub.currentPeriodEnd)} で終了`);
+    if (k === "ended") parts.push(`${jpDate(sub.currentPeriodEnd)} 終了`);
+  }
+  if (k === "trouble") parts.push("カードの支払いに失敗しています");
+  const text = parts.filter(Boolean).join("・");
+  return text ? <span> / {text}</span> : null;
+}
+
+function OfferBadge() {
+  return <span className="ml-2 rounded-[3px] bg-accent/15 px-1.5 py-0.5 text-[11px] text-accent">当日入会料金</span>;
+}
+
+function OfferButton({ id, offer }: { id: string; offer: string | null }) {
+  const on = offer === "early";
+  return (
+    <form action={setOfferAction}>
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="value" value={on ? "none" : "early"} />
+      <SubmitButton
+        pendingLabel="処理中…"
+        confirmMessage={
+          on
+            ? "当日入会料金を外します。これから申し込む場合は通常料金になります。よろしいですか？"
+            : `この会員を当日入会料金（${yen(PLANS.early.amount)}）にします。これから申し込む場合に反映されます。よろしいですか？`
+        }
+        className="rounded-[4px] px-3 py-1.5 text-xs text-muted hover:text-accent"
+      >
+        {on ? "当日料金を外す" : "当日料金にする"}
+      </SubmitButton>
+    </form>
+  );
+}
+
+function StaffBadge() {
+  return <span className="ml-2 rounded-[3px] bg-navy-deep px-1.5 py-0.5 text-[11px] text-white">運営</span>;
+}
+
+function StaffButton({ id, staff }: { id: string; staff: boolean }) {
+  return (
+    <form action={setStaffAction}>
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="value" value={staff ? "off" : "on"} />
+      <SubmitButton
+        pendingLabel="処理中…"
+        confirmMessage={
+          staff
+            ? "運営メンバーから外します。有料プランに申し込んでいないと、動画・資料が見られなくなります。よろしいですか？"
+            : "この会員を運営メンバーにします。有料プランに申し込まなくても、すべての動画・資料（プレミアム限定を含む）を見られます。よろしいですか？"
+        }
+        className="rounded-[4px] px-3 py-1.5 text-xs text-muted hover:text-accent"
+      >
+        {staff ? "運営から外す" : "運営にする"}
+      </SubmitButton>
+    </form>
   );
 }
