@@ -1,4 +1,5 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
+import { recordView } from "@/lib/views";
 import { auth } from "@/auth";
 import { isFreeAccessMode } from "@/lib/access";
 import { hasActiveSubscription } from "@/lib/subscription";
@@ -30,12 +31,18 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/pdfs/[key]">
   }
   // 予約配信中の資料は公開日時まで管理者以外には返さない
   const [doc] = await db
-    .select({ publishAt: pdfDocuments.publishAt })
+    .select({ id: pdfDocuments.id, publishAt: pdfDocuments.publishAt })
     .from(pdfDocuments)
     .where(eq(pdfDocuments.url, `/api/pdfs/${key}`))
     .limit(1);
   if (doc && !isPublished(doc.publishAt) && !isAdminEmail(session.user.email)) {
     return new NextResponse("Not found", { status: 404 });
+  }
+
+  // 「新しいタブ / ダウンロード」から直接開いた場合も閲覧済みにする
+  if (doc) {
+    const uid = session.user.id;
+    after(() => recordView(uid, "pdf", doc.id));
   }
 
   const manifest = await getPdfManifest(key);

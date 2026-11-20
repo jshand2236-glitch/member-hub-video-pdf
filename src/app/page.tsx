@@ -8,6 +8,7 @@ import { isFreeAccessMode, paidStartLabel } from "@/lib/access";
 import { INSTRUCTORS } from "@/data/instructors";
 import FreeVideoCard from "@/components/free-video-card";
 import PriceTable from "@/components/price-table";
+import { basePlanFor, getPricing } from "@/lib/pricing";
 import { getFreeVideos } from "@/lib/free-videos";
 
 export default async function Home() {
@@ -17,7 +18,7 @@ export default async function Home() {
   const isSubscribed =
     !freeAccess && session?.user?.id ? await hasActiveSubscription(session.user.id) : false;
   const canViewContent = freeAccess || isSubscribed;
-  const freeVideos = await getFreeVideos(3);
+  const [freeVideos, pricing] = await Promise.all([getFreeVideos(3), getPricing()]);
 
   const primaryHref = session?.user
     ? canViewContent
@@ -226,11 +227,11 @@ export default async function Home() {
             <Jp>
               {freeAccess
                 ? `現在は会員登録だけで無料でご利用いただけます。${paidStartLabel()}から、次の料金プランに切り替わります。`
-                : "基本プランですべての動画講義と資料PDFを、プレミアムプランではさらに限定動画もご覧いただけます。"}
+                : "すべての動画講義と資料PDFをご覧いただけます。"}
             </Jp>
           </p>
           <div className="mt-10">
-            <PriceTable action={session?.user ? () => (<Link href="/pricing" className="btn btn-outline w-full !px-4">料金プランのページへ</Link>) : undefined} />
+            <PriceTable pricing={pricing} base={basePlanFor(null, pricing)} action={session?.user ? () => (<Link href="/pricing" className="btn btn-outline w-full !px-4">料金プランのページへ</Link>) : undefined} />
           </div>
           <div className="mt-10">
             <Link href="/pricing" className="font-sans text-xs tracking-[0.18em] text-accent hover:underline">

@@ -11,8 +11,6 @@ import { queueAdminSignupNotice, queueWelcomeEmail } from "@/lib/welcome-email";
 import { headers } from "next/headers";
 import { LIMITS, clientIp, consume } from "@/lib/rate-limit";
 import { isAdminEmail } from "@/lib/admin";
-import { EARLY_OFFER } from "@/lib/plans";
-import { hasEarlyOfferCookie } from "@/lib/offer";
 
 export type RegisterState = {
   error?: string;
@@ -74,8 +72,6 @@ export async function registerAction(
     passwordHash,
     status: "pending",
     student,
-    // 当日入会の限定URLから来た人は ¥2,980 で申し込めるようにする
-    offer: (await hasEarlyOfferCookie()) ? EARLY_OFFER : null,
   });
   queueAdminSignupNotice({ email, name: name || null, student: !!student, school: school || null });
   queueWelcomeEmail({ email, name: name || null });

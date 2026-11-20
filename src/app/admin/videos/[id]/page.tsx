@@ -13,6 +13,7 @@ import PublishAtField from "../../publish-at-field";
 import UnlockWeekField from "../../unlock-week-field";
 import FreeField from "../../free-field";
 import PremiumField from "../../premium-field";
+import { PREMIUM_ENABLED } from "@/lib/plans";
 import { getAllEventsNewestFirst } from "@/lib/events";
 import SubmitButton from "@/components/submit-button";
 
@@ -127,7 +128,7 @@ export default async function EditVideoPage(props: PageProps<"/admin/videos/[id]
         <EventPicker events={allEvents} defaultValue={video.eventId} className={inputClass} />
         <PublishAtField defaultValue={video.publishAt} inputClass={inputClass} labelClass={labelClass} />
         <UnlockWeekField defaultValue={video.unlockWeek} inputClass={inputClass} labelClass={labelClass} />
-        <PremiumField defaultChecked={video.premiumOnly} labelClass={labelClass} />
+        {PREMIUM_ENABLED && <PremiumField defaultChecked={video.premiumOnly} labelClass={labelClass} />}
         <FreeField defaultChecked={video.isFree} labelClass={labelClass} />
         <div>
           <label className={labelClass} htmlFor="provider">

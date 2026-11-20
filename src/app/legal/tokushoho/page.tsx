@@ -1,13 +1,15 @@
 import { SELLER } from "@/data/legal";
 import { TRIAL_DAYS } from "@/lib/billing";
 import { PLANS, yen } from "@/lib/plans";
+import { getPricing } from "@/lib/pricing";
 import Jp from "@/components/jp";
 
 export const metadata = {
   title: "特定商取引法に基づく表記 | FMC",
 };
 
-export default function TokushohoPage() {
+export default async function TokushohoPage() {
+  const pricing = await getPricing();
   const trial = TRIAL_DAYS > 0;
   const rows: [string, string][] = [
     ["販売事業者", SELLER.name],
@@ -18,7 +20,7 @@ export default function TokushohoPage() {
     ["サービス名", "FUKUOKA MEDICAL CONNECT MEMBERS（会員制動画・資料配信サービス）"],
     [
       "販売価格（月額・税込）",
-      `${PLANS.standard.name} ${yen(PLANS.standard.amount)}／${PLANS.premium.name} ${yen(PLANS.premium.amount)}／${PLANS.early.name}（医療者交流会の限定ご案内からお申し込みの方）${yen(PLANS.early.amount)}／${PLANS.student.name}（医療系の学校に在学中の方・運営による確認後）${yen(PLANS.student.amount)}`,
+      `${PLANS.founder.name}（期間中にお申し込みの方）${yen(pricing.founder.amount)}／${PLANS.standard.name}（期間終了後にお申し込みの方）${yen(pricing.standard.amount)}／${PLANS.student.name}（医療系の学校に在学中の方・運営による確認後）${yen(pricing.student.amount)}`,
     ],
     ["商品代金以外の必要料金", "インターネット接続にかかる通信料はお客様のご負担となります。"],
     ["お支払い方法", "クレジットカード決済（Stripe）"],

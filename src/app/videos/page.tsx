@@ -13,6 +13,7 @@ import FilterChip from "@/components/filter-chip";
 import { isAdminEmail } from "@/lib/admin";
 import { formatUnlockDate, getMemberStart, lockState, type Lock } from "@/lib/drip";
 import { hasPremiumAccess, isPremiumLocked } from "@/lib/premium";
+import { getViewedIds } from "@/lib/views";
 
 export const metadata = {
   title: "会員限定動画 | FMC",
@@ -42,11 +43,13 @@ function VideoCard({
   showPart,
   lock,
   premiumLocked = false,
+  viewed = false,
 }: {
   video: Video;
   showPart: boolean;
   lock: Lock;
   premiumLocked?: boolean;
+  viewed?: boolean;
 }) {
   const thumb = lock.locked || premiumLocked ? null : thumbnailFor(video);
   const part = findBodyPart(video.bodyPart);
@@ -116,6 +119,7 @@ function VideoCard({
             {part.label}
           </span>
         )}
+        {viewed && <ViewedBadge />}
       </div>
       <div className="flex flex-1 flex-col p-4">
         <h3 className="font-medium leading-snug">{video.title}</h3>
@@ -170,6 +174,7 @@ export default async function VideosPage(props: PageProps<"/videos">) {
   const lockOf = (v: Video) => lockState(v.isFree ? null : v.unlockWeek, memberStart, { isAdmin });
   const premium = allVideos.some((v) => v.premiumOnly) ? await hasPremiumAccess(session.user as { id: string; email?: string | null }) : false;
   const premiumLockOf = (v: Video) => isPremiumLocked(v, premium);
+  const viewedIds = await getViewedIds(session.user!.id!, "video");
 
   // オフラインセミナー: recordings from 医療者交流会 (linked to a meetup) and
   // any video without a body part. Grouped by meetup, newest first.
@@ -314,7 +319,7 @@ export default async function VideosPage(props: PageProps<"/videos">) {
                         </h3>
                         <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                           {sg.videos.map((video) => (
-                            <VideoCard key={video.id} video={video} showPart={false} lock={lockOf(video)} premiumLocked={premiumLockOf(video)} />
+                            <VideoCard key={video.id} video={video} showPart={false} lock={lockOf(video)} premiumLocked={premiumLockOf(video)} viewed={viewedIds.has(video.id)} />
                           ))}
                         </div>
                       </div>
@@ -323,7 +328,7 @@ export default async function VideosPage(props: PageProps<"/videos">) {
                 ) : (
                   <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     {g.videos.map((video) => (
-                      <VideoCard key={video.id} video={video} showPart={false} lock={lockOf(video)} premiumLocked={premiumLockOf(video)} />
+                      <VideoCard key={video.id} video={video} showPart={false} lock={lockOf(video)} premiumLocked={premiumLockOf(video)} viewed={viewedIds.has(video.id)} />
                     ))}
                   </div>
                 )}
@@ -333,5 +338,16 @@ export default async function VideosPage(props: PageProps<"/videos">) {
         </>
       )}
     </div>
+  );
+}
+
+function ViewedBadge() {
+  return (
+    <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-navy-deep/85 px-2 py-0.5 font-sans text-[11px] text-white">
+      <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true">
+        <path d="M5 12l5 5L20 7" />
+      </svg>
+      視聴済み
+    </span>
   );
 }

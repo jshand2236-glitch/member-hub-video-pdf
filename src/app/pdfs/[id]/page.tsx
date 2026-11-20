@@ -7,6 +7,8 @@ import { pdfDocuments, videos } from "@/db/schema";
 import { findBodyPart } from "@/data/body-parts";
 import { isAdminEmail } from "@/lib/admin";
 import { formatPublishAt, isPublished, isPublishedSql } from "@/lib/publish";
+import { recordView } from "@/lib/views";
+import { after } from "next/server";
 
 export default async function PdfDetailPage(props: PageProps<"/pdfs/[id]">) {
   const { id } = await props.params;
@@ -19,6 +21,8 @@ export default async function PdfDetailPage(props: PageProps<"/pdfs/[id]">) {
   // 予約配信中の資料は公開日時まで会員には見せない（管理者は確認用に見られる）
   if (!doc || (!isPublished(doc.publishAt) && !isAdmin)) notFound();
   const scheduled = !isPublished(doc.publishAt);
+  const uid = session.user!.id!;
+  after(() => recordView(uid, "pdf", doc.id));
 
   const part = findBodyPart(doc.bodyPart);
   const relatedVideos = part

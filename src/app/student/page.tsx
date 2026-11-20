@@ -7,6 +7,7 @@ import Jp from "@/components/jp";
 import SubmitButton from "@/components/submit-button";
 import { isFreeAccessMode, paidStartLabel } from "@/lib/access";
 import { PLANS, yen } from "@/lib/plans";
+import { getPricing } from "@/lib/pricing";
 import { requestStudentAction } from "./actions";
 
 export const metadata = {
@@ -33,6 +34,7 @@ export default async function StudentPage(props: PageProps<"/student">) {
   const schoolError = sp?.error === "school";
   const session = await auth();
   const freeAccess = isFreeAccessMode();
+  const pricing = await getPricing();
 
   let student: string | null = null;
   if (session?.user?.id) {
@@ -60,8 +62,13 @@ export default async function StudentPage(props: PageProps<"/student">) {
           <div className="mt-8 inline-flex items-baseline gap-3 rounded-[4px] border border-white/20 bg-white/5 px-5 py-4">
             <span className="text-xs text-white/70">学割プラン 月額</span>
             <span className="text-3xl font-bold text-white">{yen(PLANS.student.amount)}</span>
-            <span className="text-xs text-white/60 line-through">{yen(PLANS.standard.amount)}</span>
+            <span className="text-xs text-white/60 line-through">{yen(pricing.standard.amount)}</span>
           </div>
+          {pricing.founder.open && (
+            <p className="mt-4 max-w-xl rounded-[4px] border border-accent/60 bg-accent/15 px-4 py-3 text-sm text-white">
+              <Jp>{`いまは期間限定プラン（月額 ${yen(pricing.founder.amount)}）があり、学生の方も学割よりお得にお申し込みいただけます（解約するまでずっとこの料金）。期間後は学割が適用されます。`}</Jp>
+            </p>
+          )}
           {freeAccess && (
             <p className="mt-4 text-xs leading-relaxed text-white/70">
               <Jp>{`※ 現在は会員登録だけで無料でご利用いただけます（${paidStartLabel()}から有料プランが始まります）。学割の申請は今のうちから受け付けています。`}</Jp>
@@ -190,7 +197,7 @@ export default async function StudentPage(props: PageProps<"/student">) {
               <Jp>確認のため、学生証などをお願いすることがあります。</Jp>
             </p>
             <p>
-              <Jp>{`卒業後（3月末）はスタンダードプラン（月額 ${yen(PLANS.standard.amount)}）に切り替わります。切り替えは次回の更新分からです。`}</Jp>
+              <Jp>{`卒業後（3月末）はスタンダードプラン（月額 ${yen(pricing.standard.amount)}）に切り替わります。切り替えは次回の更新分からです。`}</Jp>
             </p>
             <p>
               <Jp>解約はマイページからいつでも行えます。</Jp>

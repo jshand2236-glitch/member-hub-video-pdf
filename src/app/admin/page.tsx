@@ -8,7 +8,7 @@ import { MEMBER_STATUS_LABEL, isMemberStatus, type MemberStatus } from "@/lib/me
 import PdfUploadForm from "./pdf-upload-form";
 import { BODY_PARTS } from "@/data/body-parts";
 import { INSTRUCTORS } from "@/data/instructors";
-import { addEventAction, addVideoAction, deleteEventAction, movePartAction, setMemberStatusAction, setOfferAction, setStaffAction, setStudentAction } from "./actions";
+import { addEventAction, addVideoAction, deleteEventAction, movePartAction, setMemberStatusAction, setStaffAction, setStandardPriceAction, setStudentAction, deleteMemberAction } from "./actions";
 import { SEMINAR_SLUG, categoryLabel, getPartOrder } from "@/lib/part-order";
 import EventFields from "./event-fields";
 import Link from "next/link";
@@ -18,10 +18,11 @@ import PublishAtField from "./publish-at-field";
 import UnlockWeekField from "./unlock-week-field";
 import FreeField from "./free-field";
 import PremiumField from "./premium-field";
-import { getAppUrl } from "@/lib/url";
 import { PdfAdminList, VideoAdminList } from "./content-lists";
 import SubmitButton from "@/components/submit-button";
-import { PLANS, earlyJoinCode, priceIdFor, yen, type PlanKey } from "@/lib/plans";
+import { PLANS, PREMIUM_ENABLED, yen, type PlanKey } from "@/lib/plans";
+import { getPricing } from "@/lib/pricing";
+import { stripe } from "@/lib/stripe";
 
 export const metadata = {
   title: "管理画面 | FMC",
@@ -32,6 +33,10 @@ export default async function AdminPage(props: PageProps<"/admin">) {
   const videoError = searchParams?.videoError === "1";
   const eventError = searchParams?.eventError === "1";
   const studentError = searchParams?.studentError === "1";
+  const deleteError = searchParams?.deleteError;
+  const deleted = searchParams?.deleted === "1";
+  const priceSaved = searchParams?.priceSaved === "1";
+  const priceError = searchParams?.priceError === "1";
   const subFilter = typeof searchParams?.sub === "string" ? searchParams.sub : "";
   const session = await auth();
   if (!session?.user) {
@@ -40,6 +45,15 @@ export default async function AdminPage(props: PageProps<"/admin">) {
   if (!isAdminEmail(session.user.email)) {
     redirect("/dashboard");
   }
+
+  const [pricing, stripePrices] = await Promise.all([getPricing(), listMonthlyJpyPrices()]);
+  // 契約の Price ID → プラン名（通常料金は管理画面の設定で変わるので毎回作る）
+  const planNames = new Map<string, string>();
+  for (const k of ["founder", "standard", "student", "premium"] as PlanKey[]) {
+    const id = pricing[k].priceId;
+    if (id) planNames.set(id, PLANS[k].name);
+  }
+  for (const p of stripePrices) if (!planNames.has(p.id)) planNames.set(p.id, `${yen(p.amount)}のプラン`);
 
   const [allVideos, allPdfs, allMembers, eventLists, allEvents, partOrder, allSubs] = await Promise.all([
     db.select().from(videos).orderBy(asc(videos.sortOrder), asc(videos.createdAt)),
@@ -51,7 +65,6 @@ export default async function AdminPage(props: PageProps<"/admin">) {
         email: users.email,
         status: users.status,
         student: users.student,
-        offer: users.offer,
         staff: users.staff,
         createdAt: users.createdAt,
       })
@@ -103,13 +116,23 @@ export default async function AdminPage(props: PageProps<"/admin">) {
             </span>
           )}
         </h2>
+        {deleted && (
+          <p role="status" className="mt-3 rounded-[4px] border border-line bg-soft px-4 py-3 text-sm">会員を削除しました。</p>
+        )}
+        {deleteError && (
+          <p role="alert" className="mt-3 rounded-[4px] border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {deleteError === "subscribed"
+              ? "有料プランで契約中の会員は削除できません。先に本人にマイページから解約してもらうか、Stripeで解約してから削除してください。"
+              : "管理者のアカウントは削除できません。"}
+          </p>
+        )}
         {studentError && (
           <p role="alert" className="mt-3 rounded-[4px] border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
             学割の設定は保存しましたが、Stripe側の料金の切り替えに失敗しました。Stripeの料金ID（環境変数）を確認してください。
           </p>
         )}
         <p className="mt-1 text-xs text-muted">
-          学割を承認すると月額 ¥1,980 で申し込めます。契約中の人の学割を外す（卒業など）と、次回更新分から ¥3,980 に切り替わります。
+          学割を承認すると月額 ¥1,980 で申し込めます（期間限定プランの受付中は、学生も ¥980 になります）。契約中の人の学割を外す（卒業など）と、次回更新分から通常料金に切り替わります。
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
           <span className="text-muted">契約状況：</span>
@@ -136,7 +159,6 @@ export default async function AdminPage(props: PageProps<"/admin">) {
                   <p className="font-medium">
                     {m.name || "（氏名未入力）"}
                     <StudentBadge student={m.student} />
-                    {m.offer === "early" && <OfferBadge />}
                     {m.staff && <StaffBadge />}
                   </p>
                   <p className="text-xs text-muted">
@@ -145,9 +167,9 @@ export default async function AdminPage(props: PageProps<"/admin">) {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <StudentButtons id={m.id} student={m.student} />
-                  <OfferButton id={m.id} offer={m.offer} />
                   <StaffButton id={m.id} staff={m.staff} />
                   <MemberButtons id={m.id} current="pending" />
+                  {!isAdminEmail(m.email) && <DeleteMemberButton id={m.id} name={m.name || m.email} />}
                 </div>
               </li>
             ))}
@@ -175,20 +197,19 @@ export default async function AdminPage(props: PageProps<"/admin">) {
                           {MEMBER_STATUS_LABEL[st]}
                         </span>
                         <StudentBadge student={m.student} />
-                    {m.offer === "early" && <OfferBadge />}
                     {m.staff && <StaffBadge />}
                         <SubBadge sub={subOf.get(m.id)} />
                       </p>
                       <p className="text-xs text-muted">
                         {m.email} / 登録日 {m.createdAt.toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })}
-                        <SubDetail sub={subOf.get(m.id)} />
+                        <SubDetail sub={subOf.get(m.id)} planNames={planNames} />
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <StudentButtons id={m.id} student={m.student} />
-                  <OfferButton id={m.id} offer={m.offer} />
                   <StaffButton id={m.id} staff={m.staff} />
                       <MemberButtons id={m.id} current={st} />
+                      {!isAdminEmail(m.email) && <DeleteMemberButton id={m.id} name={m.name || m.email} />}
                     </div>
                   </li>
                 );
@@ -198,24 +219,60 @@ export default async function AdminPage(props: PageProps<"/admin">) {
         )}
       </section>
 
-      {/* 当日入会の限定URL */}
-      <section id="early-url" className="mt-12 scroll-mt-24">
-        <h2 className="text-lg font-semibold">交流会当日入会の限定URL</h2>
-        <p className="mt-1 text-sm text-muted">
-          このURL（またはQRコード）から登録した人は、{PLANS.early.name}（月額 {yen(PLANS.early.amount)}）で申し込めます。料金表には表示されません。期限はありません。
-        </p>
-        {earlyJoinCode() ? (
-          <p className="mt-3 break-all rounded-[4px] border border-line bg-soft px-4 py-3 font-mono text-sm">
-            {`${getAppUrl()}/join/${earlyJoinCode()}`}
-          </p>
-        ) : (
-          <p className="mt-3 rounded-[4px] border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
-            まだ使えません。Netlifyの環境変数 EARLY_JOIN_CODE に、推測されにくい英数字（6文字以上）を設定してください。
+      {/* 料金設定 */}
+      <section id="pricing" className="mt-12 scroll-mt-24">
+        <h2 className="text-lg font-semibold">料金の設定</h2>
+        {priceSaved && (
+          <p role="status" className="mt-3 rounded-[4px] border border-line bg-soft px-4 py-3 text-sm">通常料金を変更しました。</p>
+        )}
+        {priceError && (
+          <p role="alert" className="mt-3 rounded-[4px] border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+            料金を変更できませんでした。Stripeの「毎月・円」の有効な価格を選んでください。
           </p>
         )}
-        <p className="mt-2 text-xs text-muted">
-          URLを使わずに入会した参加者には、会員一覧の「当日料金にする」で同じ料金を付けられます（申し込み前の人のみ反映）。
-        </p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="rounded-[4px] border border-line p-4">
+            <p className="text-xs text-muted">{`期間限定プラン（${yen(pricing.founder.amount)}・${pricing.founder.endLabel}まで）`}</p>
+            {pricing.founder.priceId ? (
+              <>
+                <p className="mt-1 text-2xl font-bold">
+                  {pricing.founder.taken}
+                  <span className="ml-1 text-sm font-normal text-muted">名が申し込み</span>
+                </p>
+                <p className="mt-1 text-xs text-muted">
+                  {pricing.founder.open
+                    ? `受付中。${pricing.founder.endLabel}までに申し込む人は ${yen(pricing.founder.amount)} です（人数の上限なし）。`
+                    : "受付は終了しました。これから申し込む人は右の通常料金になります。"}
+                </p>
+              </>
+            ) : (
+              <p className="mt-2 text-sm text-red-700">まだ使えません。Netlifyの環境変数 STRIPE_PRICE_ID_FOUNDER に ¥980 の価格IDを設定してください。</p>
+            )}
+            <p className="mt-2 text-[11px] text-muted">¥980で申し込んだ人数（解約した人も含む）。この人たちは解約するまでずっと¥980です。</p>
+          </div>
+          <div className="rounded-[4px] border border-line p-4">
+            <p className="text-xs text-muted">{`${pricing.founder.endLabel}より後の通常料金`}</p>
+            <p className="mt-1 text-2xl font-bold">{`月額 ${yen(pricing.standard.amount)}`}</p>
+            <form action={setStandardPriceAction} className="mt-3 flex flex-wrap items-center gap-2">
+              <select name="priceId" defaultValue={pricing.standard.priceId ?? ""} className="min-w-0 flex-1 rounded-[4px] border border-line bg-transparent px-2 py-1.5 text-sm">
+                {stripePrices.length === 0 && <option value="">（Stripeの価格を読み込めませんでした）</option>}
+                {stripePrices.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {`${yen(p.amount)}／月${p.label ? `（${p.label}）` : ""}`}
+                  </option>
+                ))}
+              </select>
+              <SubmitButton
+                pendingLabel="保存中…"
+                confirmMessage="通常料金を変更します。これから申し込む人に適用されます（すでに契約中の人の料金は変わりません）。よろしいですか？"
+                className="rounded-[4px] bg-accent px-3 py-1.5 text-xs text-white hover:bg-accent-hover"
+              >
+                変更
+              </SubmitButton>
+            </form>
+            <p className="mt-2 text-[11px] text-muted">選べるのはStripeに登録した「毎月・円」の価格です。新しい金額にしたいときは、先にStripeで価格を追加してください。</p>
+          </div>
+        </div>
       </section>
 
       {/* 医療者交流会 */}
@@ -391,7 +448,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
           </div>
           <PublishAtField id="add-video-publishAt" inputClass={inputClass} labelClass={labelClass} />
           <UnlockWeekField id="add-video-unlockWeek" inputClass={inputClass} labelClass={labelClass} />
-          <PremiumField labelClass={labelClass} />
+          {PREMIUM_ENABLED && <PremiumField labelClass={labelClass} />}
           <FreeField labelClass={labelClass} />
           <div className="sm:col-span-2">
             <SubmitButton
@@ -524,7 +581,7 @@ function StudentButtons({ id, student }: { id: string; student: string | null })
       "none",
       "学割を外す",
       "border border-line text-muted hover:text-accent",
-      "学割を外します。契約中の場合、次回の更新分からスタンダード（¥3,980）に切り替わります。よろしいですか？",
+      "学割を外します。契約中の場合、次回の更新分から通常料金に切り替わります（期間限定プラン・プレミアムの人は変わりません）。よろしいですか？",
     );
   return btn(
     "approved",
@@ -554,10 +611,6 @@ function subKind(s: SubInfo | undefined): SubKind {
   if (s.status === "past_due" || s.status === "unpaid" || s.status === "incomplete") return "trouble";
   return "ended";
 }
-function planOf(priceId: string | null): PlanKey | null {
-  if (!priceId) return null;
-  return (["premium", "student", "early", "standard"] as PlanKey[]).find((k) => priceIdFor(k) === priceId) ?? null;
-}
 const jpDate = (d: Date) => d.toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" });
 
 function SubBadge({ sub }: { sub: SubInfo | undefined }) {
@@ -574,11 +627,10 @@ function SubBadge({ sub }: { sub: SubInfo | undefined }) {
   return <span className={`ml-2 rounded-[3px] px-1.5 py-0.5 text-[11px] ${tone}`}>{SUB_LABEL[k].label}</span>;
 }
 
-function SubDetail({ sub }: { sub: SubInfo | undefined }) {
+function SubDetail({ sub, planNames }: { sub: SubInfo | undefined; planNames: Map<string, string> }) {
   const k = subKind(sub);
   if (!sub || k === "none") return null;
-  const plan = planOf(sub.stripePriceId);
-  const parts = [plan ? `${PLANS[plan].name}` : null];
+  const parts = [sub.stripePriceId ? (planNames.get(sub.stripePriceId) ?? null) : null];
   if (sub.currentPeriodEnd) {
     if (k === "active") parts.push(`次回更新 ${jpDate(sub.currentPeriodEnd)}`);
     if (k === "canceling") parts.push(`${jpDate(sub.currentPeriodEnd)} で終了`);
@@ -587,31 +639,6 @@ function SubDetail({ sub }: { sub: SubInfo | undefined }) {
   if (k === "trouble") parts.push("カードの支払いに失敗しています");
   const text = parts.filter(Boolean).join("・");
   return text ? <span> / {text}</span> : null;
-}
-
-function OfferBadge() {
-  return <span className="ml-2 rounded-[3px] bg-accent/15 px-1.5 py-0.5 text-[11px] text-accent">当日入会料金</span>;
-}
-
-function OfferButton({ id, offer }: { id: string; offer: string | null }) {
-  const on = offer === "early";
-  return (
-    <form action={setOfferAction}>
-      <input type="hidden" name="id" value={id} />
-      <input type="hidden" name="value" value={on ? "none" : "early"} />
-      <SubmitButton
-        pendingLabel="処理中…"
-        confirmMessage={
-          on
-            ? "当日入会料金を外します。これから申し込む場合は通常料金になります。よろしいですか？"
-            : `この会員を当日入会料金（${yen(PLANS.early.amount)}）にします。これから申し込む場合に反映されます。よろしいですか？`
-        }
-        className="rounded-[4px] px-3 py-1.5 text-xs text-muted hover:text-accent"
-      >
-        {on ? "当日料金を外す" : "当日料金にする"}
-      </SubmitButton>
-    </form>
-  );
 }
 
 function StaffBadge() {
@@ -636,4 +663,33 @@ function StaffButton({ id, staff }: { id: string; staff: boolean }) {
       </SubmitButton>
     </form>
   );
+}
+
+function DeleteMemberButton({ id, name }: { id: string; name: string }) {
+  return (
+    <form action={deleteMemberAction}>
+      <input type="hidden" name="id" value={id} />
+      <SubmitButton
+        pendingLabel="削除中…"
+        confirmMessage={`${name} さんを削除します。視聴記録なども消え、元に戻せません。よろしいですか？`}
+        className="rounded-[4px] px-2 py-1.5 text-xs text-red-600 hover:underline"
+      >
+        削除
+      </SubmitButton>
+    </form>
+  );
+}
+
+/** Stripe に登録されている「毎月・円」の有効な価格（通常料金を選ぶ欄に出す）。 */
+async function listMonthlyJpyPrices(): Promise<{ id: string; amount: number; label: string }[]> {
+  try {
+    const res = await stripe.prices.list({ active: true, type: "recurring", limit: 50 });
+    return res.data
+      .filter((p) => p.currency === "jpy" && p.recurring?.interval === "month" && p.unit_amount != null)
+      .map((p) => ({ id: p.id, amount: p.unit_amount!, label: p.nickname ?? "" }))
+      .sort((a, b) => a.amount - b.amount);
+  } catch (err) {
+    console.error("[admin] failed to list Stripe prices", err);
+    return [];
+  }
 }

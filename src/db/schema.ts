@@ -1,4 +1,4 @@
-import { pgTable, text, integer, boolean, timestamp, date } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, boolean, timestamp, date, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: text("id")
@@ -102,6 +102,24 @@ export const rateLimitEvents = pgTable("rate_limit_events", {
   bucket: text("bucket").notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });
+
+// 視聴済み・閲覧済みの記録（会員ごと・動画/PDFごとに1行）。会員を削除すると一緒に消える。
+export const contentViews = pgTable(
+  "content_views",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // "video" | "pdf"
+    kind: text("kind").notNull(),
+    contentId: text("content_id").notNull(),
+    viewedAt: timestamp("viewed_at", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("content_views_user_kind_content").on(t.userId, t.kind, t.contentId)],
+);
 
 // 医療者交流会 (offline study meetups, about every two months). Shown on the
 // member dashboard; managed from /admin.

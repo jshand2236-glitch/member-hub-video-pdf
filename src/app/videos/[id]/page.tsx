@@ -10,6 +10,8 @@ import { isAdminEmail } from "@/lib/admin";
 import { formatUnlockDate, getMemberStart, lockState } from "@/lib/drip";
 import { formatPublishAt, isPublished } from "@/lib/publish";
 import { hasPremiumAccess, isPremiumLocked } from "@/lib/premium";
+import { recordView } from "@/lib/views";
+import { after } from "next/server";
 
 function buildEmbedUrl(video: typeof videos.$inferSelect): string {
   if (video.provider === "youtube") {
@@ -45,6 +47,11 @@ export default async function VideoDetailPage(props: PageProps<"/videos/[id]">) 
     ? isPremiumLocked(video, await hasPremiumAccess(session.user as { id: string; email?: string | null }))
     : false;
   const embedUrl = buildEmbedUrl(video);
+  // プレーヤーを出したときだけ「視聴済み」にする（鍵がかかっているときは記録しない）
+  if (!premiumLocked && !lock.locked) {
+    const uid = session.user!.id!;
+    after(() => recordView(uid, "video", video.id));
+  }
   const part = findBodyPart(video.bodyPart);
   const [event] = video.eventId
     ? await db.select().from(events).where(eq(events.id, video.eventId)).limit(1)

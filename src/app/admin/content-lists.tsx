@@ -1,3 +1,4 @@
+import { PREMIUM_ENABLED } from "@/lib/plans";
 import Link from "next/link";
 import type { pdfDocuments, videos } from "@/db/schema";
 import { UNCATEGORIZED, findBodyPart } from "@/data/body-parts";
@@ -124,7 +125,7 @@ function Row({
               予約 {formatPublishAt(publishAt)} 公開
             </span>
           )}
-          {premiumOnly && !isFree && (
+          {PREMIUM_ENABLED && premiumOnly && !isFree && (
             <span className="mr-2 inline-block rounded-full bg-navy-deep px-2 py-0.5 align-middle font-sans text-[11px] font-medium text-white">
               プレミアム限定
             </span>

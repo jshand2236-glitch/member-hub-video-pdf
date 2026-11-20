@@ -7,8 +7,8 @@ import { hasActiveSubscription } from "@/lib/subscription";
 import { isApprovedMember } from "@/lib/member-status";
 import { isTrialEligible, TRIAL_DAYS } from "@/lib/billing";
 import { isFreeAccessMode, paidStartLabel } from "@/lib/access";
-import { EARLY_OFFER, PLANS, planFor, yen, type PlanKey } from "@/lib/plans";
-import { hasEarlyOfferCookie } from "@/lib/offer";
+import { type PlanKey } from "@/lib/plans";
+import { basePlanFor, getPricing } from "@/lib/pricing";
 import { redirect } from "next/navigation";
 import CheckoutButton from "./checkout-button";
 import Jp from "@/components/jp";
@@ -26,29 +26,26 @@ export default async function PricingPage() {
   let approved = false;
   let trial = TRIAL_DAYS > 0;
   let student: string | null = null;
-  let offer: string | null = null;
   if (user) {
     const [active, ok, eligible, [row]] = await Promise.all([
       hasActiveSubscription(user.id!),
       isApprovedMember(user as { id: string; email?: string | null }),
       isTrialEligible(user.id!),
-      db.select({ student: users.student, offer: users.offer }).from(users).where(eq(users.id, user.id!)).limit(1),
+      db.select({ student: users.student }).from(users).where(eq(users.id, user.id!)).limit(1),
     ]);
     if (active) redirect("/dashboard");
     approved = ok;
     trial = eligible;
     student = row?.student ?? null;
-    offer = row?.offer ?? null;
   }
-  // 限定URLを開いたブラウザなら、未ログインでも当日入会料金を見せる
-  if (!offer && (await hasEarlyOfferCookie())) offer = EARLY_OFFER;
-  const base: PlanKey = planFor({ student, offer });
+  const pricing = await getPricing();
+  const base: PlanKey = basePlanFor({ student }, pricing);
 
   // ログイン中の人のボタン（申し込めない理由があれば案内文）
   const memberAction = (key: PlanKey) => {
     if (freeAccess) return <Notice>{`有料プランは${paidStartLabel()}から開始します。それまでは無料でご利用いただけます。`}</Notice>;
     if (!approved) return <Notice>運営による会員登録の承認後にお申し込みいただけます。</Notice>;
-    if (key !== "premium" && student === "requested")
+    if (key !== "premium" && key !== "founder" && student === "requested")
       return <Notice>学割の確認中です。運営の確認が終わると、学割価格でお申し込みいただけます。</Notice>;
     return key === "premium" ? (
       <CheckoutButton isLoggedIn tier="premium" variant="outline" label="プレミアムに申し込む" />
@@ -63,22 +60,17 @@ export default async function PricingPage() {
         <span className="eyebrow">Plan</span>
         <h1 className="mt-2 font-serif text-2xl font-semibold sm:text-3xl">料金プランのご案内</h1>
         <p className="mx-auto mt-4 max-w-xl text-sm leading-loose text-muted">
-          <Jp>FMCは、福岡の医療者が学び続けるための会員制サイトです。基本プランですべての動画講義と資料PDFを、プレミアムプランではさらに限定動画もご覧いただけます。</Jp>
+          <Jp>FMCは、福岡の医療者が学び続けるための会員制サイトです。すべての動画講義と資料PDFをご覧いただけます。</Jp>
         </p>
         {freeAccess && (
           <p className="mx-auto mt-4 max-w-xl rounded-[4px] border border-accent/40 bg-accent/5 px-4 py-3 text-sm">
             <Jp>{`現在は会員登録（運営の承認）だけで無料でご利用いただけます。${paidStartLabel()}から、下記の料金プランに切り替わります。`}</Jp>
           </p>
         )}
-        {base === "early" && (
-          <p className="mx-auto mt-4 max-w-xl rounded-[4px] border border-accent bg-accent/10 px-4 py-3 text-sm">
-            <Jp>{`交流会の限定ご案内から来られた方は、${PLANS.early.name}（月額 ${yen(PLANS.early.amount)}）でお申し込みいただけます。`}</Jp>
-          </p>
-        )}
       </div>
 
       <div className="mt-12">
-        <PriceTable base={base} current={!!user && base !== "standard"} action={user ? memberAction : undefined} />
+        <PriceTable pricing={pricing} base={base} current={!!user && base === "student"} action={user ? memberAction : undefined} />
       </div>
       <PricingInfo showJoin={!user} />
       <p className="mt-12 text-center text-xs">

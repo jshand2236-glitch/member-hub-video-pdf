@@ -1,7 +1,7 @@
 "use server";
 
 import { stripe } from "@/lib/stripe";
-import { priceIdFor } from "@/lib/plans";
+import { getPricing, setStandardPrice } from "@/lib/pricing";
 import { getLatestSubscription } from "@/lib/subscription";
 import { parsePublishAt } from "@/lib/publish";
 import { revalidatePath } from "next/cache";
@@ -274,7 +274,8 @@ export async function movePartAction(formData: FormData) {
 /**
  * 学割の承認・解除。契約中の会員は Stripe 側の料金も切り替える
  * （日割りなし・次回の更新分から新しい料金）。
- * 学割承認 → 学割プラン ¥1,980 / 学割解除（卒業など）→ スタンダード ¥3,980
+ * 学割承認 → 学割プラン ¥1,980 / 学割解除（卒業など）→ スタンダード（管理画面で選んだ通常料金）
+ * 期間限定プラン（¥980）・プレミアムの人は、学割の有無で料金を変えない。
  */
 export async function setStudentAction(formData: FormData) {
   await assertAdmin();
@@ -289,13 +290,14 @@ export async function setStudentAction(formData: FormData) {
 
   const sub = await getLatestSubscription(id);
   if (sub && ["active", "trialing", "past_due"].includes(sub.status)) {
-    const priceId = priceIdFor(student === "approved" ? "student" : "standard");
+    const pricing = await getPricing();
+    const priceId = student === "approved" ? pricing.student.priceId : pricing.standard.priceId;
     if (priceId) {
       try {
         const current = await stripe.subscriptions.retrieve(sub.stripeSubscriptionId);
         const item = current.items.data[0];
-        // プレミアムプランの人は学割の有無で料金を変えない
-        if (item && item.price.id !== priceId && item.price.id !== priceIdFor("premium")) {
+        const keep = [pricing.premium.priceId, pricing.founder.priceId].filter(Boolean);
+        if (item && item.price.id !== priceId && !keep.includes(item.price.id)) {
           await stripe.subscriptions.update(sub.stripeSubscriptionId, {
             items: [{ id: item.id, price: priceId }],
             proration_behavior: "none",
@@ -311,16 +313,6 @@ export async function setStudentAction(formData: FormData) {
   revalidatePath("/admin");
 }
 
-/** 当日入会料金（¥2,980）の付け外し。限定URLを使わずに入会した交流会参加者などに。 */
-export async function setOfferAction(formData: FormData) {
-  await assertAdmin();
-  const id = String(formData.get("id") ?? "");
-  if (!id) return;
-  const offer = formData.get("value") === "early" ? "early" : null;
-  await db.update(users).set({ offer }).where(eq(users.id, id));
-  revalidatePath("/admin");
-}
-
 /** 運営メンバー（有料プランなしで全部見られる）の付け外し。 */
 export async function setStaffAction(formData: FormData) {
   await assertAdmin();
@@ -328,4 +320,47 @@ export async function setStaffAction(formData: FormData) {
   if (!id) return;
   await db.update(users).set({ staff: formData.get("value") === "on" }).where(eq(users.id, id));
   revalidatePath("/admin");
+}
+
+/**
+ * 会員の削除。視聴記録・契約の記録も一緒に消える（元には戻せない）。
+ * Stripeで契約中の人は、請求が続いてしまうので先に解約してもらう。
+ */
+export async function deleteMemberAction(formData: FormData) {
+  await assertAdmin();
+  const session = await auth();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  const [member] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  if (!member) return;
+  if (member.id === session?.user?.id || isAdminEmail(member.email)) {
+    redirect("/admin?deleteError=admin#members");
+  }
+  const sub = await getLatestSubscription(id);
+  if (sub && ["active", "trialing", "past_due", "unpaid", "incomplete"].includes(sub.status)) {
+    redirect("/admin?deleteError=subscribed#members");
+  }
+  await db.delete(users).where(eq(users.id, id));
+  revalidatePath("/admin");
+  redirect("/admin?deleted=1#members");
+}
+
+/** 期間限定プランの受付が終わったあとの通常料金（Stripe の Price）を選ぶ。 */
+export async function setStandardPriceAction(formData: FormData) {
+  await assertAdmin();
+  const priceId = String(formData.get("priceId") ?? "");
+  if (!priceId.startsWith("price_")) redirect("/admin?priceError=1#pricing");
+  try {
+    const price = await stripe.prices.retrieve(priceId);
+    if (!price.active || price.currency !== "jpy" || !price.recurring || price.unit_amount == null) {
+      redirect("/admin?priceError=1#pricing");
+    }
+    await setStandardPrice(price.id, price.unit_amount);
+  } catch (err) {
+    if (err && typeof err === "object" && "digest" in err) throw err; // redirect
+    console.error("[admin] failed to set standard price", err);
+    redirect("/admin?priceError=1#pricing");
+  }
+  revalidatePath("/", "layout");
+  redirect("/admin?priceSaved=1#pricing");
 }

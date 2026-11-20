@@ -1,3 +1,4 @@
+import { getViewedIds } from "@/lib/views";
 import { isPublishedSql } from "@/lib/publish";
 import Link from "next/link";
 import { asc } from "drizzle-orm";
@@ -35,7 +36,7 @@ function listHref(part?: string, disease?: string) {
   return s ? `/pdfs?${s}` : "/pdfs";
 }
 
-function DocRow({ doc }: { doc: Doc }) {
+function DocRow({ doc, viewed = false }: { doc: Doc; viewed?: boolean }) {
   return (
     <li className="flex items-start gap-4 border border-line bg-background p-4 transition hover:border-accent">
       <span
@@ -48,6 +49,14 @@ function DocRow({ doc }: { doc: Doc }) {
         <Link href={`/pdfs/${doc.id}`} className="font-medium leading-snug hover:text-accent">
           {doc.title}
         </Link>
+        {viewed && (
+          <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-soft px-2 py-0.5 align-middle font-sans text-[11px] text-muted">
+            <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true">
+              <path d="M5 12l5 5L20 7" />
+            </svg>
+            閲覧済み
+          </span>
+        )}
         {doc.description && (
           <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted">{doc.description}</p>
         )}
@@ -66,12 +75,13 @@ function DocRow({ doc }: { doc: Doc }) {
 
 export default async function PdfsPage(props: PageProps<"/pdfs">) {
   // Access check and data load run in parallel to save a database round trip.
-  const [, allDocs, partOrder, sp] = await Promise.all([
+  const [session, allDocs, partOrder, sp] = await Promise.all([
     requireActiveSubscriber("/pdfs"),
     db.select().from(pdfDocuments).where(isPublishedSql(pdfDocuments.publishAt)).orderBy(asc(pdfDocuments.sortOrder), asc(pdfDocuments.createdAt)),
     getPartOrder(),
     props.searchParams,
   ]);
+  const viewedIds = await getViewedIds(session.user!.id!, "pdf");
   const pick = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
   const partParam = pick(sp?.part);
   const diseaseParam = pick(sp?.disease);
@@ -175,7 +185,7 @@ export default async function PdfsPage(props: PageProps<"/pdfs">) {
                       </h3>
                       <ul className="mt-3 grid gap-3 md:grid-cols-2">
                         {docs.map((d) => (
-                          <DocRow key={d.id} doc={d} />
+                          <DocRow key={d.id} doc={d} viewed={viewedIds.has(d.id)} />
                         ))}
                       </ul>
                     </div>

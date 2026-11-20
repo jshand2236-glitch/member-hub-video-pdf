@@ -2,8 +2,8 @@ import Link from "next/link";
 import RegisterForm from "./register-form";
 import Jp from "@/components/jp";
 import { isFreeAccessMode, paidStartLabel } from "@/lib/access";
-import { PLANS, yen } from "@/lib/plans";
-import { hasEarlyOfferCookie } from "@/lib/offer";
+import { yen } from "@/lib/plans";
+import { getPricing } from "@/lib/pricing";
 
 export const metadata = {
   title: "会員登録 | FMC",
@@ -19,7 +19,12 @@ export default async function RegisterPage(props: PageProps<"/register">) {
   const sp = await props.searchParams;
   const studentDefault = sp?.student === "1";
   const freeAccess = isFreeAccessMode();
-  const early = await hasEarlyOfferCookie();
+  const pricing = await getPricing();
+  const f = pricing.founder;
+  // 表示する料金：期間限定プランの受付中なら ¥980、終わったら通常料金（学割つき）
+  const priceText = f.open
+    ? `月額 ${yen(f.amount)}（期間限定）`
+    : `月額 ${yen(pricing.standard.amount)}（学割 ${yen(pricing.student.amount)}）`;
 
   const steps = [
     { title: "会員登録", body: "このページから。1分ほどで終わります。" },
@@ -41,11 +46,11 @@ export default async function RegisterPage(props: PageProps<"/register">) {
           <p className="mt-3 text-sm leading-relaxed text-muted">
             <Jp>福岡の医療者が学び続けるための会員制サイトです。</Jp>
           </p>
-          {early && (
+          {f.open && (
             <p className="mt-5 rounded-[4px] border border-accent bg-accent/10 px-4 py-3 text-sm">
-              <span className="font-semibold">{`${PLANS.early.name}（月額 ${yen(PLANS.early.amount)}）`}</span>
-              <span className="mt-1 block text-xs leading-relaxed text-muted">
-                <Jp>交流会の限定ご案内からのご登録です。このまま登録すると、解約するまでずっとこの料金でお申し込みいただけます。</Jp>
+              <span className="font-semibold">{`期間限定 月額 ${yen(f.amount)}`}</span>
+                            <span className="mt-1 block text-xs leading-relaxed text-muted">
+                <Jp>期間中にお申し込みの方は、解約するまでずっとこの料金でご利用いただけます。期間後は料金が上がります。</Jp>
               </span>
             </p>
           )}
@@ -86,12 +91,12 @@ export default async function RegisterPage(props: PageProps<"/register">) {
               <p>
                 <span className="font-medium">いまは無料でご利用いただけます。</span>
                 <span className="mt-1 block text-xs leading-relaxed text-muted">
-                  <Jp>{`${paidStartLabel()}から有料プラン（月額 ${yen(PLANS[early ? "early" : "standard"].amount)}・学割 ${yen(PLANS.student.amount)}）が始まります。お申し込みいただくまで料金はかかりません。`}</Jp>
+                  <Jp>{`${paidStartLabel()}から有料プラン（${priceText}）が始まります。お申し込みいただくまで料金はかかりません。`}</Jp>
                 </span>
               </p>
             ) : (
               <p>
-                <span className="font-medium">{`月額 ${yen(PLANS[early ? "early" : "standard"].amount)}（学割 ${yen(PLANS.student.amount)}）`}</span>
+                <span className="font-medium">{priceText}</span>
                 <span className="mt-1 block text-xs leading-relaxed text-muted">
                   <Jp>会員登録は無料です。料金は承認後にプランをお申し込みいただいた時点から発生し、いつでも解約できます。</Jp>
                 </span>
